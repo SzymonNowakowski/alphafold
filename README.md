@@ -203,26 +203,54 @@ change the following:
 *   Setting the `data_dir` flag is now needed when using `run_docker.py`.
 
 
-## Running AlphaFold
+## Running AlphaFold 
 
 **The simplest way to run AlphaFold is using the provided Docker script.** This
 was tested on Google Cloud with a machine using the `nvidia-gpu-cloud-image`
 with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
 3 TB disk, and an A100 GPU.
 
-1.  Clone this repository and `cd` into it.
+1. Clone this repository and `cd` into it.
 
     ```bash
     git clone https://github.com/deepmind/alphafold.git
     ```
-
-1.  Build the Docker image:
+2. Build the Docker image:
 
     ```bash
-    docker build -f docker/Dockerfile -t alphafold .
+    docker build -f docker/Dockerfile -t alphafold:2.1.1 .
+    ```
+3. Optionally, to move the image to a HPC slurm environment (customarily running Singularity, not Docker), execute the following sequence:
+
+    ```bash
+    docker image save -o local_dir/alphafold-2.1.1.docker alphafold:2.1.1
+    scp local_dir/alphafold-2.1.1.docker HPC_server:remote_dir
+    ssh -l user HPC_server
+    user@HPC_server:~/$ singularity build remote_dir/alphafold-2.1.1.sif docker-archive://remote_dir/alphafold-2.1.1.docker
     ```
 
-1.  Install the `run_docker.py` dependencies. Note: You may optionally wish to
+4. Alternatively to the point above, you 
+    can follow [Alphafold on ComputeCanada](https://docs.computecanada.ca/wiki/AlphaFold#Using_singularity)
+    instructions (with the version changed) and execute:
+
+    ```bash
+    user@HPC_server:~/$ singularity build remote_dir/alphafold-2.1.1.sif docker://uvarc/alphafold:2.1.1
+    ```
+    Observe that```docker://uvarc/alphafold```stores 
+    some other versions of the container, too. 
+
+    Observe also, that not only the version number, but 
+    the rest of [Alphafold on ComputeCanada](https://docs.computecanada.ca/wiki/AlphaFold#Using_singularity) 
+    instructions also need to be updated, since the new 
+    Alphafold2 v2.1.1 has some additional flags and 
+    functionality.
+    
+    This is NOT a recommended path, however, 
+    and is included here for completeness ot 
+    this```Readme```file only.
+
+
+6. Install the `run_docker.py` dependencies. Note: You may optionally wish to
     create a
     [Python Virtual Environment](https://docs.python.org/3/tutorial/venv.html)
     to prevent conflicts with your system's Python environment.
@@ -231,7 +259,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     pip3 install -r docker/requirements.txt
     ```
 
-1.  Run `run_docker.py` pointing to a FASTA file containing the protein
+7. Run `run_docker.py` pointing to a FASTA file containing the protein
     sequence(s) for which you wish to predict the structure. If you are
     predicting the structure of a protein that is already in PDB and you wish to
     avoid using it as a template, then `max_template_date` must be set to be
@@ -252,7 +280,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     [GPU enumeration](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/user-guide.html#gpu-enumeration)
     for more details.
 
-1.  You can control which AlphaFold model to run by adding the
+8. You can control which AlphaFold model to run by adding the
     `--model_preset=` flag. We provide the following models:
 
     * **monomer**: This is the original model used at CASP14 with no ensembling.
@@ -271,7 +299,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
       To use this model, provide a multi-sequence FASTA file. In addition, the
       UniProt database should have been downloaded.
 
-1.  You can control MSA speed/quality tradeoff by adding
+9. You can control MSA speed/quality tradeoff by adding
     `--db_preset=reduced_dbs` or `--db_preset=full_dbs` to the run command. We
     provide the following presets:
 
