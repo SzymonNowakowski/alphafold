@@ -236,7 +236,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     ```bash
     user@HPC_server:~/$ singularity build remote_dir/alphafold-2.1.1.sif docker://uvarc/alphafold:2.1.1
     ```
-    Observe that```docker://uvarc/alphafold```stores 
+    Observe that [uvarc/alphafold link](https://hub.docker.com/r/uvarc/alphafold#!) stores 
     some other versions of the container, too. 
 
     Observe also, that not only the version number, but 
