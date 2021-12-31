@@ -236,14 +236,15 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     ```bash
     user@HPC_server:~/$ singularity build remote_dir/alphafold-2.1.1.sif docker://uvarc/alphafold:2.1.1
     ```
-    Observe that [uvarc/alphafold link](https://hub.docker.com/r/uvarc/alphafold#!) stores 
+    Observe that [`uvarc/alphafold` link](https://hub.docker.com/r/uvarc/alphafold#!) stores 
     some other versions of the container, too. 
 
     Observe also, that not only the version number, but 
     the rest of [Alphafold on ComputeCanada](https://docs.computecanada.ca/wiki/AlphaFold#Using_singularity) 
     instructions also need to be updated, since the new 
-    Alphafold2 v2.1.1 has some additional flags and 
-    functionality.
+    Alphafold2 v2.1.1 has some additional flags (or replaces some flags) and 
+    new functionality. More on the new flags in Alphafold v2.1.1
+    in Section [Running AlphaFold under HPC with Singularity](#running-alphafold-under-hpc-with-singularity) below.
     
     This is NOT a recommended path, however, 
     and is included here for completeness ot 
@@ -320,6 +321,67 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
       --db_preset=reduced_dbs \
       --data_dir=$DOWNLOAD_DIR
     ```
+
+### Running AlphaFold under HPC with Singularity
+
+Once you have completed points 1-3 from the Section [Running AlphaFold](#running-alphafold)
+and downloaded the databases and the model parameters, you may 
+run AlphaFold under Singularity by submitting a following 
+slurm job `run_alphafold.slurm`:
+
+```
+#!/bin/bash
+#SBATCH --job-name alphafold2 
+#SBATCH -A xxxxx            # your account or grant name (to be charged for the computation in HPC)
+#SBATCH --time=2-00:00:00   # or whatever fits the QoS, adjust this to match the walltime of your job
+#SBATCH --cpus-per-task=8   # DO NOT INCREASE THIS AS ALPHAFOLD CANNOT TAKE ADVANTAGE OF MORE
+#SBATCH --gres=gpu:1        # You need to request one GPU to be able to run AlphaFold properly
+#SBATCH --mem=90G           # adjust this according to the memory requirement per node you need
+
+###LOGGING
+echo $1 >> outputs/$SLURM_JOB_ID.desc
+cat $0 >> outputs/$SLURM_JOB_ID.desc
+
+#set the environment PATH
+export PYTHONNOUSERSITE=True
+#module load singularity
+ALPHAFOLD_DATA_PATH=remote_dir_with_protein_databases
+ALPHAFOLD_MODELS=remote_dir_with_model_parameters
+BASE_DIR=$(pwd)
+
+
+#Run the command
+singularity run --nv \
+ -B $ALPHAFOLD_DATA_PATH:/data \
+ -B $ALPHAFOLD_MODELS \
+ --pwd  /app/alphafold remote_dir/alphafold-2.1.1.sif \
+ --fasta_paths=$BASE_DIR/$1  \
+ --uniref90_database_path=/data/uniref90/uniref90.fasta  \
+ --data_dir=/data \
+ --mgnify_database_path=/data/mgnify/mgy_clusters_2018_12.fa \
+ --bfd_database_path=/data/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt
+ \
+ --uniclust30_database_path=/data/uniclust30/uniclust30_2018_08/uniclust30_2018_08 \
+ --pdb70_database_path=/data/pdb70/pdb70  \
+ --template_mmcif_dir=/data/pdb_mmcif/mmcif_files  \
+ --obsolete_pdbs_path=/data/pdb_mmcif/obsolete.dat \
+ --output_dir=$BASE_DIR/outputs  \
+ --model_preset=monomer \   #new parameters in v2.1.1
+ --db_preset=full_dbs \
+ --max_template_date=2021-12-31 \    #it became mandatory to set it in v2.1.1
+#parameters from v2.0.0 no longer in use
+ #--model_names='model_1' \
+ #--preset=full_dbs
+
+```
+
+In particular, you may run it with a command
+
+```
+sbatch run_alphafold.slurm inputs/file_with_monomer.fasta
+```
+
+to have the results written into the `outputs` directory.
 
 ### Running AlphaFold-Multimer
 
