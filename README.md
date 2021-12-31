@@ -324,7 +324,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
 
 ### Running AlphaFold under HPC with Singularity
 
-Once you have completed points 1-3 from the Section [Running AlphaFold](#running-alphafold)
+Once you have completed points 1-3 from Section [Running AlphaFold](#running-alphafold)
 and downloaded the databases and the model parameters, you may 
 run AlphaFold under Singularity by submitting a following 
 slurm job `run_alphafold.slurm`:
