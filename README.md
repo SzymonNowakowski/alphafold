@@ -366,13 +366,9 @@ singularity run --nv \
  --template_mmcif_dir=/data/pdb_mmcif/mmcif_files  \
  --obsolete_pdbs_path=/data/pdb_mmcif/obsolete.dat \
  --output_dir=$BASE_DIR/outputs  \
- --model_preset=monomer \   #new parameters in v2.1.1
+ --model_preset=monomer \
  --db_preset=full_dbs \
- --max_template_date=2021-12-31 \    #it became mandatory to set it in v2.1.1
-#parameters from v2.0.0 no longer in use
- #--model_names='model_1' \
- #--preset=full_dbs
-
+ --max_template_date=2021-12-31 
 ```
 
 In particular, you may run it with a command
@@ -382,6 +378,23 @@ sbatch run_alphafold.slurm inputs/file_with_monomer.fasta
 ```
 
 to have the results written into the `outputs` directory.
+
+#### Changes
+New flags in v2.1.1:
+
+```
+ --model_preset=monomer    
+ --db_preset=full_dbs
+``` 
+
+Also, it became mandatory to set `max_template_date` in v2.1.1
+
+Flags from v2.0.0 no longer in use in v2.1.1:
+```
+ #--model_names='model_1' 
+ #--preset=full_dbs
+```
+
 
 ### Running AlphaFold-Multimer
 
