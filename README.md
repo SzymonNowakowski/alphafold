@@ -228,8 +228,18 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     ssh -l user HPC_server
     user@HPC_server:~/$ singularity build remote_dir/alphafold-2.1.1.sif docker-archive://remote_dir/alphafold-2.1.1.docker
     ```
+   
+    On some HPC environments, before the execution of the last step,
+    it may be necessary to
 
-4. Alternatively to the point above, you 
+    * enter an interactive SLURM mode with a command 
+    `srun -N1 -n1 --account xxxx --gres=gpu:1 --time=48:00:00 --pty /bin/bash -l` with `xxxx` 
+   being your account or grant name (to be charged for the computations in HPC)
+    * make sure that there is enough space for temporary files
+      (there may be not enough space on the default temporary resource) 
+      with a command `export SINGULARITY_TMPDIR=/home/$USER/tmp`
+      (after making sure the `/home/$USER/tmp` directory exists)
+5. Alternatively to the point above, you 
     can follow [Alphafold on ComputeCanada](https://docs.computecanada.ca/wiki/AlphaFold#Using_singularity)
     instructions (with the version changed) and execute:
 
@@ -331,8 +341,8 @@ slurm job `run_alphafold.slurm`:
 
 ```
 #!/bin/bash
-#SBATCH --job-name alphafold2 
-#SBATCH -A xxxxx            # your account or grant name (to be charged for the computation in HPC)
+#SBATCH --job-name alphafold2.1.1
+#SBATCH -A xxxx            # your account or grant name (to be charged for the computations in HPC)
 #SBATCH --time=2-00:00:00   # or whatever fits the QoS, adjust this to match the walltime of your job
 #SBATCH --cpus-per-task=8   # DO NOT INCREASE THIS AS ALPHAFOLD CANNOT TAKE ADVANTAGE OF MORE
 #SBATCH --gres=gpu:1        # You need to request one GPU to be able to run AlphaFold properly
