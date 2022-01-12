@@ -411,7 +411,7 @@ choose to run external codebase from `alphafold_current` subdirectory by executi
 
 1. Execute `mkdir alphafold_current` to create the codebase subdirectory
     
-1. Clone this repository in `alphafold_current` subdirectory:
+1. Clone this repository into `alphafold_current` subdirectory:
 
     ```bash
     cd alphafold_current
