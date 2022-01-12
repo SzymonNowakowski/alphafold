@@ -22,7 +22,7 @@ import sys
 import time
 from typing import Dict
 
-sys.path.insert(0,'/app/alphafold')
+sys.path.insert(0, '/alphafold_current')
 
 from absl import app
 from absl import flags
