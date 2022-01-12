@@ -239,7 +239,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
       with a command `export SINGULARITY_TMPDIR=/home/$USER/tmp`
       (after making sure the `/home/$USER/tmp` directory exists and has sufficient quota)
   
-   **OR, as the alternative to the last step** you may submit the following `sbatch build_singularity.slurm` script:
+   **OR, as the alternative to the last step** you may submit the following `build_singularity.slurm` script:
     ```bash
     #!/bin/bash
     #SBATCH --job-name build_alphafold2.1.1_singularity_container
@@ -251,7 +251,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     export SINGULARITY_TMPDIR=/home/$USER/tmp
     singularity build remote_dir/alphafold-2.1.1.sif docker-archive://remote_dir/alphafold-2.1.1.docker
     ```
-         
+    with a command `sbatch build_singularity.slurm` 
          
 1. Alternatively to the point above, you 
     may follow [Alphafold on ComputeCanada](https://docs.computecanada.ca/wiki/AlphaFold#Using_singularity)
