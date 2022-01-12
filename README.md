@@ -24,8 +24,8 @@ This package was forked from the original [DeepMind github](https://github.com/d
 [Center4ML Team](https://center4ml.idub.uw.edu.pl/) to provide the following two changes:
 
 * the option to run the CPU-intensive database search pipeline **separately** from the GPU-intensive 
-   neural network interfence
-* the option to start folding from a researcher-provided structural hipotesis 
+   neural network inference and
+* the option to start folding from a researcher-provided structural hypothesis.
 
 ## First time setup
 
@@ -273,10 +273,10 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     new functionality. More on the new flags in Alphafold v2.1.1
     in Section [Running AlphaFold under HPC with Singularity](#running-alphafold-under-hpc-with-singularity) below.
     
-    This is NOT a recommended path, as this gives you the vanilla Alphafold v2.1.1,
-    **with no Center4ML-developed features available**,
-    and it is included here for completeness ot 
-    this```Readme```file only. 
+ >   This is NOT a recommended path, however, as this gives you the vanilla Alphafold v2.1.1,
+ >   **with no Center4ML-developed features available**,
+ >   and it is included here for completeness ot 
+ >   this```Readme```file only. 
 
 
 1. Install the `run_docker.py` dependencies. Note: You may optionally wish to
