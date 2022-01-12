@@ -473,7 +473,7 @@ sbatch run_alphafold_external_code.slurm inputs/file_with_monomer.fasta
 
 to have the results written into the `outputs` directory.
 
-#### Execution divided into CPU- and GPU- instensive parts
+#### Execution divided into CPU- and GPU-intensive parts
 
 *Work in progress*
 
