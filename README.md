@@ -19,7 +19,7 @@ for a detailed description of the method.
 
 ![CASP14 predictions](imgs/casp14_predictions.gif)
 
-##Center4ML fork
+## Center4ML fork
 This package was forked from the original [DeepMind github](https://github.com/deepmind/alphafold) and is under development by
 [Center4ML Team](https://center4ml.idub.uw.edu.pl/) to provide the following two changes:
 
