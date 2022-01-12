@@ -261,7 +261,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     user@HPC_server:~/$ singularity build remote_dir/alphafold-2.1.1.sif docker://uvarc/alphafold:2.1.1
     ```
    
-    All bolded footnotes from the point above apply here, as well.
+    All bolded HPC-related footnotes from the point above apply here, as well.
 
     Observe that [`uvarc/alphafold` link](https://hub.docker.com/r/uvarc/alphafold#!) stores 
     some other versions of the container, too. 
