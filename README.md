@@ -214,12 +214,12 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     ```bash
     git clone https://github.com/SzymonNowakowski/alphafold.git
     ```
-2. Build the Docker image:
+1. Build the Docker image:
 
     ```bash
     docker build -f docker/Dockerfile -t alphafold:2.1.1 .
     ```
-3. Optionally, to move the image to a HPC slurm environment (customarily running Singularity, not Docker), execute the following sequence:
+1. Optionally, to move the image to a HPC slurm environment (customarily running Singularity, not Docker), execute the following sequence:
 
     ```bash
     docker image save -o local_dir/alphafold-2.1.1.docker alphafold:2.1.1
@@ -253,7 +253,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     ```
     with a command `sbatch build_singularity.slurm` 
          
-4. Alternatively to the point above, you 
+1. Alternatively to the point above, you 
     may follow [Alphafold on ComputeCanada](https://docs.computecanada.ca/wiki/AlphaFold#Using_singularity)
     instructions (with the version changed) and execute:
 
@@ -273,10 +273,10 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     new functionality. More on the new flags in Alphafold v2.1.1
     in Section [Running AlphaFold under HPC with Singularity](#running-alphafold-under-hpc-with-singularity) below.
     
- >   This is NOT a recommended path, however, as this gives you the vanilla Alphafold v2.1.1,
- >   **with no Center4ML-developed features available**,
- >   and it is included here for completeness ot 
- >   this```Readme```file only. 
+    >   This is NOT a recommended path, however, as this gives you the vanilla Alphafold v2.1.1,
+    >   **with no Center4ML-developed features available**,
+    >   and it is included here for completeness ot 
+    >   this```Readme```file only. 
 
 
 1. Install the `run_docker.py` dependencies. Note: You may optionally wish to
