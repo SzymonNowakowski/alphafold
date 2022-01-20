@@ -20,67 +20,37 @@ import pickle
 import random
 import sys
 import time
-from typing import Dict
-
-sys.path.insert(0,'/app/alphafold')
+from typing import Dict, Union, Optional
 
 from absl import app
 from absl import flags
 from absl import logging
 from alphafold.common import protein
 from alphafold.common import residue_constants
-from alphafold.data import pipeline
-from alphafold.data import templates
-from alphafold.model import data
 from alphafold.model import config
 from alphafold.model import model
 from alphafold.relax import relax
 import numpy as np
+
+from alphafold.model import data
 # Internal import (7716).
 
-flags.DEFINE_list('features_paths', None, 'Paths to features pickle files, containing '
-                  'precomputed features. Paths should be separated by commas. '
-                  'The parent directory is used as sequence name '
-                  'and is used to name the output directories for '
-                  'each prediction.')
+logging.set_verbosity(logging.INFO)
+
+flags.DEFINE_list(
+    'features_paths', None, 'Paths to features pickle files, containing '
+    'precomputed features. Paths should be separated by commas. '
+    'The parent directory is used as sequence name and is used to '
+    'and is used to name the output directories for each prediction.')
+
+flags.DEFINE_string('data_dir', None, 'Path to directory of supporting data.')
 flags.DEFINE_string('output_dir', None, 'Path to a directory that will '
                     'store the results.')
-flags.DEFINE_list('model_names', None, 'Names of models to use.')
-flags.DEFINE_string('data_dir', None, 'Path to directory of supporting data.')
-flags.DEFINE_string('jackhmmer_binary_path', '/usr/bin/jackhmmer',
-                    'Path to the JackHMMER executable.')
-flags.DEFINE_string('hhblits_binary_path', '/usr/bin/hhblits',
-                    'Path to the HHblits executable.')
-flags.DEFINE_string('hhsearch_binary_path', '/usr/bin/hhsearch',
-                    'Path to the HHsearch executable.')
-flags.DEFINE_string('kalign_binary_path', '/usr/bin/kalign',
-                    'Path to the Kalign executable.')
-flags.DEFINE_string('uniref90_database_path', None, 'Path to the Uniref90 '
-                    'database for use by JackHMMER.')
-flags.DEFINE_string('mgnify_database_path', None, 'Path to the MGnify '
-                    'database for use by JackHMMER.')
-flags.DEFINE_string('bfd_database_path', None, 'Path to the BFD '
-                    'database for use by HHblits.')
-flags.DEFINE_string('small_bfd_database_path', None, 'Path to the small '
-                    'version of BFD used with the "reduced_dbs" preset.')
-flags.DEFINE_string('uniclust30_database_path', None, 'Path to the Uniclust30 '
-                    'database for use by HHblits.')
-flags.DEFINE_string('pdb70_database_path', None, 'Path to the PDB70 '
-                    'database for use by HHsearch.')
-flags.DEFINE_string('template_mmcif_dir', None, 'Path to a directory with '
-                    'template mmCIF structures, each named <pdb_id>.cif')
-flags.DEFINE_string('max_template_date', None, 'Maximum template release date '
-                    'to consider. Important if folding historical test sets.')
-flags.DEFINE_string('obsolete_pdbs_path', None, 'Path to file containing a '
-                    'mapping from obsolete PDB IDs to the PDB IDs of their '
-                    'replacements.')
-flags.DEFINE_enum('preset', 'full_dbs',
-                  ['reduced_dbs', 'full_dbs', 'casp14'],
-                  'Choose preset model configuration - no ensembling and '
-                  'smaller genetic database config (reduced_dbs), no '
-                  'ensembling and full genetic database config  (full_dbs) or '
-                  'full genetic database config and 8 model ensemblings '
-                  '(casp14).')
+flags.DEFINE_enum('model_preset', 'monomer',
+                  ['monomer', 'monomer_casp14', 'monomer_ptm', 'multimer'],
+                  'Choose preset model configuration - the monomer model, '
+                  'the monomer model with extra ensembling, monomer model with '
+                  'pTM head, or multimer model')
 flags.DEFINE_boolean('benchmark', False, 'Run multiple JAX model evaluations '
                      'to obtain a timing that excludes the compilation time, '
                      'which should be more indicative of the time required for '
@@ -90,20 +60,24 @@ flags.DEFINE_integer('random_seed', None, 'The random seed for the data '
                      'that even if this is set, Alphafold may still not be '
                      'deterministic, because processes like GPU inference are '
                      'nondeterministic.')
+
 FLAGS = flags.FLAGS
 
-MAX_TEMPLATE_HITS = 20
 RELAX_MAX_ITERATIONS = 0
 RELAX_ENERGY_TOLERANCE = 2.39
 RELAX_STIFFNESS = 10.0
 RELAX_EXCLUDE_RESIDUES = []
-RELAX_MAX_OUTER_ITERATIONS = 20
+RELAX_MAX_OUTER_ITERATIONS = 3
 
 
-def _check_flag(flag_name: str, preset: str, should_be_set: bool):
+def _check_flag(flag_name: str,
+                other_flag_name: str,
+                should_be_set: bool):
   if should_be_set != bool(FLAGS[flag_name].value):
     verb = 'be' if should_be_set else 'not be'
-    raise ValueError(f'{flag_name} must {verb} set for preset "{preset}"')
+    raise ValueError(f'{flag_name} must {verb} set when running with '
+                     f'"--{other_flag_name}={FLAGS[other_flag_name].value}".')
+
 
 def predict_structure_from_features(
     features_path: str,
@@ -114,45 +88,51 @@ def predict_structure_from_features(
     benchmark: bool,
     random_seed: int):
   """Predicts structure using AlphaFold for the given sequence."""
-  timings = {}
+  logging.info('Predicting %s', fasta_name)
   output_dir = os.path.join(output_dir_base, fasta_name)
-  if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-  msa_output_dir = os.path.join(output_dir, 'msas')
-  if not os.path.exists(msa_output_dir):
-    os.makedirs(msa_output_dir)
 
-  # Read features as a pickled dictionary.
+  timings = {}
+
+  # Load out features from a pickled dictionary.
   with open(features_path, 'rb') as f:
     feature_dict = pickle.load(f)
 
+  unrelaxed_pdbs = {}
   relaxed_pdbs = {}
-  plddts = {}
+  ranking_confidences = {}
 
   # Run the models.
-  for model_name, model_runner in model_runners.items():
-    logging.info('Running model %s', model_name)
+  num_models = len(model_runners)
+  for model_index, (model_name, model_runner) in enumerate(
+      model_runners.items()):
+    logging.info('Running model %s on %s', model_name, fasta_name)
     t_0 = time.time()
+    model_random_seed = model_index + random_seed * num_models
     processed_feature_dict = model_runner.process_features(
-        feature_dict, random_seed=random_seed)
+        feature_dict, random_seed=model_random_seed)
     timings[f'process_features_{model_name}'] = time.time() - t_0
 
     t_0 = time.time()
-    prediction_result = model_runner.predict(processed_feature_dict)
+    prediction_result = model_runner.predict(processed_feature_dict,
+                                             random_seed=model_random_seed)
     t_diff = time.time() - t_0
     timings[f'predict_and_compile_{model_name}'] = t_diff
     logging.info(
-        'Total JAX model %s predict time (includes compilation time, see --benchmark): %.0f?',
-        model_name, t_diff)
+        'Total JAX model %s on %s predict time (includes compilation time, see --benchmark): %.1fs',
+        model_name, fasta_name, t_diff)
 
     if benchmark:
       t_0 = time.time()
-      model_runner.predict(processed_feature_dict)
-      timings[f'predict_benchmark_{model_name}'] = time.time() - t_0
+      model_runner.predict(processed_feature_dict,
+                           random_seed=model_random_seed)
+      t_diff = time.time() - t_0
+      timings[f'predict_benchmark_{model_name}'] = t_diff
+      logging.info(
+          'Total JAX model %s on %s predict time (excludes compilation time): %.1fs',
+          model_name, fasta_name, t_diff)
 
-    # Get mean pLDDT confidence metric.
     plddt = prediction_result['plddt']
-    plddts[model_name] = np.mean(plddt)
+    ranking_confidences[model_name] = prediction_result['ranking_confidence']
 
     # Save the model outputs.
     result_output_path = os.path.join(output_dir, f'result_{model_name}.pkl')
@@ -166,40 +146,49 @@ def predict_structure_from_features(
     unrelaxed_protein = protein.from_prediction(
         features=processed_feature_dict,
         result=prediction_result,
-        b_factors=plddt_b_factors)
+        b_factors=plddt_b_factors,
+        remove_leading_feature_dimension=not model_runner.multimer_mode)
 
+    unrelaxed_pdbs[model_name] = protein.to_pdb(unrelaxed_protein)
     unrelaxed_pdb_path = os.path.join(output_dir, f'unrelaxed_{model_name}.pdb')
     with open(unrelaxed_pdb_path, 'w') as f:
-      f.write(protein.to_pdb(unrelaxed_protein))
+      f.write(unrelaxed_pdbs[model_name])
 
-    # Relax the prediction.
-    t_0 = time.time()
-    relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
-    timings[f'relax_{model_name}'] = time.time() - t_0
+    if amber_relaxer:
+      # Relax the prediction.
+      t_0 = time.time()
+      relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
+      timings[f'relax_{model_name}'] = time.time() - t_0
 
-    relaxed_pdbs[model_name] = relaxed_pdb_str
+      relaxed_pdbs[model_name] = relaxed_pdb_str
 
-    # Save the relaxed PDB.
-    relaxed_output_path = os.path.join(output_dir, f'relaxed_{model_name}.pdb')
-    with open(relaxed_output_path, 'w') as f:
-      f.write(relaxed_pdb_str)
+      # Save the relaxed PDB.
+      relaxed_output_path = os.path.join(
+          output_dir, f'relaxed_{model_name}.pdb')
+      with open(relaxed_output_path, 'w') as f:
+        f.write(relaxed_pdb_str)
 
-  # Rank by pLDDT and write out relaxed PDBs in rank order.
+  # Rank by model confidence and write out relaxed PDBs in rank order.
   ranked_order = []
   for idx, (model_name, _) in enumerate(
-      sorted(plddts.items(), key=lambda x: x[1], reverse=True)):
+      sorted(ranking_confidences.items(), key=lambda x: x[1], reverse=True)):
     ranked_order.append(model_name)
     ranked_output_path = os.path.join(output_dir, f'ranked_{idx}.pdb')
     with open(ranked_output_path, 'w') as f:
-      f.write(relaxed_pdbs[model_name])
+      if amber_relaxer:
+        f.write(relaxed_pdbs[model_name])
+      else:
+        f.write(unrelaxed_pdbs[model_name])
 
   ranking_output_path = os.path.join(output_dir, 'ranking_debug.json')
   with open(ranking_output_path, 'w') as f:
-    f.write(json.dumps({'plddts': plddts, 'order': ranked_order}, indent=4))
+    label = 'iptm+ptm' if 'iptm' in prediction_result else 'plddts'
+    f.write(json.dumps(
+        {label: ranking_confidences, 'order': ranked_order}, indent=4))
 
   logging.info('Final timings for %s: %s', fasta_name, timings)
 
-  timings_output_path = os.path.join(output_dir, 'timings.json')
+  timings_output_path = os.path.join(output_dir, 'timings_pred.json')
   with open(timings_output_path, 'w') as f:
     f.write(json.dumps(timings, indent=4))
 
@@ -208,20 +197,26 @@ def main(argv):
   if len(argv) > 1:
     raise app.UsageError('Too many command-line arguments.')
 
-  if FLAGS.preset in ('reduced_dbs', 'full_dbs'):
-    num_ensemble = 1
-  elif FLAGS.preset == 'casp14':
+  run_multimer_system = 'multimer' in FLAGS.model_preset
+
+  if FLAGS.model_preset == 'monomer_casp14':
     num_ensemble = 8
+  else:
+    num_ensemble = 1
 
   # Check for duplicate FASTA file names.
   fasta_names = [pathlib.Path(p).parent.stem for p in FLAGS.features_paths]
   if len(fasta_names) != len(set(fasta_names)):
-    raise ValueError('All FASTA paths must have a unique basename.')
+    raise ValueError('All features paths must have a unique parent directory.')
 
   model_runners = {}
-  for model_name in FLAGS.model_names:
+  model_names = config.MODEL_PRESETS[FLAGS.model_preset]
+  for model_name in model_names:
     model_config = config.model_config(model_name)
-    model_config.data.eval.num_ensemble = num_ensemble
+    if run_multimer_system:
+      model_config.model.num_ensemble_eval = num_ensemble
+    else:
+      model_config.data.eval.num_ensemble = num_ensemble
     model_params = data.get_model_haiku_params(
         model_name=model_name, data_dir=FLAGS.data_dir)
     model_runner = model.RunModel(model_config, model_params)
@@ -239,11 +234,12 @@ def main(argv):
 
   random_seed = FLAGS.random_seed
   if random_seed is None:
-    random_seed = random.randrange(sys.maxsize)
+    random_seed = random.randrange(sys.maxsize // len(model_names))
   logging.info('Using random seed %d for the data pipeline', random_seed)
 
   # Predict structure for each of the sequences.
-  for features_path, fasta_name in zip(FLAGS.features_paths, fasta_names):
+  for i, features_path in enumerate(FLAGS.features_paths):
+    fasta_name = fasta_names[i]
     predict_structure_from_features(
         features_path=features_path,
         fasta_name=fasta_name,
@@ -258,9 +254,7 @@ if __name__ == '__main__':
   flags.mark_flags_as_required([
       'features_paths',
       'output_dir',
-      'model_names',
       'data_dir',
-      'preset',
   ])
 
   app.run(main)
