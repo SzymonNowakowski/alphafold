@@ -3,15 +3,11 @@
 # AlphaFold
 
 This package provides an implementation of the inference pipeline of AlphaFold
-v2.0. This is a completely new model that was entered in CASP14 and published in
+v2.1.1. This is a completely new model that was entered in CASP14 and published in
 Nature. For simplicity, we refer to this model as AlphaFold throughout the rest
 of this document.
 
-We also provide an implementation of AlphaFold-Multimer. This represents a work
-in progress and AlphaFold-Multimer isn't expected to be as stable as our monomer
-AlphaFold system.
-[Read the guide](#updating-existing-alphafold-installation-to-include-alphafold-multimers)
-for how to upgrade and update code.
+
 
 Any publication that discloses findings arising from using this source code or the model parameters should [cite](#citing-this-work) the
 [AlphaFold  paper](https://doi.org/10.1038/s41586-021-03819-2) and, if
@@ -21,12 +17,15 @@ Please also refer to the
 [Supplementary Information](https://static-content.springer.com/esm/art%3A10.1038%2Fs41586-021-03819-2/MediaObjects/41586_2021_3819_MOESM1_ESM.pdf)
 for a detailed description of the method.
 
-**You can use a slightly simplified version of AlphaFold with
-[this Colab
-notebook](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb)**
-or community-supported versions (see below).
-
 ![CASP14 predictions](imgs/casp14_predictions.gif)
+
+## Center4ML fork
+This package was forked from the original [DeepMind github](https://github.com/deepmind/alphafold) and is under development by
+[Center4ML Team](https://center4ml.idub.uw.edu.pl/) to provide the following two changes:
+
+* the option to run the CPU-intensive database search pipeline **separately** from the GPU-intensive 
+   neural network inference and
+* the option to start folding from a researcher-provided structural hypothesis.
 
 ## First time setup
 
@@ -213,14 +212,14 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
 1. Clone this repository and `cd` into it.
 
     ```bash
-    git clone https://github.com/deepmind/alphafold.git
+    git clone https://github.com/SzymonNowakowski/alphafold.git
     ```
-2. Build the Docker image:
+1. Build the Docker image:
 
     ```bash
     docker build -f docker/Dockerfile -t alphafold:2.1.1 .
     ```
-3. Optionally, to move the image to a HPC slurm environment (customarily running Singularity, not Docker), execute the following sequence:
+1. Optionally, to move the image to a HPC slurm environment (customarily running Singularity, not Docker), execute the following sequence:
 
     ```bash
     docker image save -o local_dir/alphafold-2.1.1.docker alphafold:2.1.1
@@ -228,14 +227,42 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     ssh -l user HPC_server
     user@HPC_server:~/$ singularity build remote_dir/alphafold-2.1.1.sif docker-archive://remote_dir/alphafold-2.1.1.docker
     ```
+   
+    **On some HPC environments, before the execution of the last step,
+    it may be necessary to**
 
-4. Alternatively to the point above, you 
-    can follow [Alphafold on ComputeCanada](https://docs.computecanada.ca/wiki/AlphaFold#Using_singularity)
+    * enter an interactive SLURM mode with a command 
+    `srun -N1 -n1 --account xxxx --gres=gpu:1 --time=2-00:00:00 --pty /bin/bash -l` with `xxxx` 
+   being your account or grant name (to be charged for the computations in HPC)
+    * make sure that there is enough space for temporary files
+      (there may be not enough space on the default temporary resource) 
+      with a command `export SINGULARITY_TMPDIR=/home/$USER/tmp`
+      (after making sure the `/home/$USER/tmp` directory exists and has sufficient quota)
+  
+   **OR, as the alternative to the last step** you may submit the following `build_singularity.slurm` script:
+    ```bash
+    #!/bin/bash
+    #SBATCH --job-name build_alphafold2.1.1_singularity_container
+    #SBATCH -A xxxx             # your account or grant name (to be charged for the computations in HPC)
+    #SBATCH --time=2-00:00:00   
+    #SBATCH --cpus-per-task=1   
+    #SBATCH --gres=gpu:1
+    mkdir /home/$USER/tmp
+    export SINGULARITY_TMPDIR=/home/$USER/tmp
+    singularity build remote_dir/alphafold-2.1.1.sif docker-archive://remote_dir/alphafold-2.1.1.docker
+    ```
+    with a command `sbatch build_singularity.slurm` 
+         
+1. Alternatively to the point above, you 
+    may follow [Alphafold on ComputeCanada](https://docs.computecanada.ca/wiki/AlphaFold#Using_singularity)
     instructions (with the version changed) and execute:
 
     ```bash
     user@HPC_server:~/$ singularity build remote_dir/alphafold-2.1.1.sif docker://uvarc/alphafold:2.1.1
     ```
+   
+    All bolded HPC-related footnotes from the point above apply here, as well.
+
     Observe that [`uvarc/alphafold` link](https://hub.docker.com/r/uvarc/alphafold#!) stores 
     some other versions of the container, too. 
 
@@ -246,12 +273,13 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     new functionality. More on the new flags in Alphafold v2.1.1
     in Section [Running AlphaFold under HPC with Singularity](#running-alphafold-under-hpc-with-singularity) below.
     
-    This is NOT a recommended path, however, 
-    and is included here for completeness ot 
-    this```Readme```file only.
+    >   This is NOT a recommended path, however, as this gives you the vanilla Alphafold v2.1.1,
+    >   **with no Center4ML-developed features available**,
+    >   and it is included here for completeness ot 
+    >   this```Readme```file only. 
 
 
-6. Install the `run_docker.py` dependencies. Note: You may optionally wish to
+1. Install the `run_docker.py` dependencies. Note: You may optionally wish to
     create a
     [Python Virtual Environment](https://docs.python.org/3/tutorial/venv.html)
     to prevent conflicts with your system's Python environment.
@@ -260,7 +288,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     pip3 install -r docker/requirements.txt
     ```
 
-7. Run `run_docker.py` pointing to a FASTA file containing the protein
+1. Run `run_docker.py` pointing to a FASTA file containing the protein
     sequence(s) for which you wish to predict the structure. If you are
     predicting the structure of a protein that is already in PDB and you wish to
     avoid using it as a template, then `max_template_date` must be set to be
@@ -281,7 +309,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
     [GPU enumeration](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/user-guide.html#gpu-enumeration)
     for more details.
 
-8. You can control which AlphaFold model to run by adding the
+1. You can control which AlphaFold model to run by adding the
     `--model_preset=` flag. We provide the following models:
 
     * **monomer**: This is the original model used at CASP14 with no ensembling.
@@ -300,7 +328,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
       To use this model, provide a multi-sequence FASTA file. In addition, the
       UniProt database should have been downloaded.
 
-9. You can control MSA speed/quality tradeoff by adding
+1. You can control MSA speed/quality tradeoff by adding
     `--db_preset=reduced_dbs` or `--db_preset=full_dbs` to the run command. We
     provide the following presets:
 
@@ -324,15 +352,17 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
 
 ### Running AlphaFold under HPC with Singularity
 
+#### Container codebase
+
 Once you have completed points 1-3 from Section [Running AlphaFold](#running-alphafold)
 and downloaded the databases and the model parameters, you may 
-run AlphaFold under Singularity by submitting a following 
+run AlphaFold under Singularity by submitting the following 
 slurm job `run_alphafold.slurm`:
 
-```
+```bash
 #!/bin/bash
-#SBATCH --job-name alphafold2 
-#SBATCH -A xxxxx            # your account or grant name (to be charged for the computation in HPC)
+#SBATCH --job-name alphafold2.1.1
+#SBATCH -A xxxx             # your account or grant name (to be charged for the computations in HPC)
 #SBATCH --time=2-00:00:00   # or whatever fits the QoS, adjust this to match the walltime of your job
 #SBATCH --cpus-per-task=8   # DO NOT INCREASE THIS AS ALPHAFOLD CANNOT TAKE ADVANTAGE OF MORE
 #SBATCH --gres=gpu:1        # You need to request one GPU to be able to run AlphaFold properly
@@ -355,31 +385,119 @@ singularity run --nv \
  -B $ALPHAFOLD_DATA_PATH:/data \
  -B $ALPHAFOLD_MODELS \
  --pwd  /app/alphafold remote_dir/alphafold-2.1.1.sif \
- --fasta_paths=$BASE_DIR/$1  \
- --uniref90_database_path=/data/uniref90/uniref90.fasta  \
+ --fasta_paths=$BASE_DIR/$1 \
+ --uniref90_database_path=/data/uniref90/uniref90.fasta \
  --data_dir=/data \
  --mgnify_database_path=/data/mgnify/mgy_clusters_2018_12.fa \
- --bfd_database_path=/data/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt
- \
+ --bfd_database_path=/data/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt \
  --uniclust30_database_path=/data/uniclust30/uniclust30_2018_08/uniclust30_2018_08 \
- --pdb70_database_path=/data/pdb70/pdb70  \
- --template_mmcif_dir=/data/pdb_mmcif/mmcif_files  \
+ --pdb70_database_path=/data/pdb70/pdb70 \
+ --template_mmcif_dir=/data/pdb_mmcif/mmcif_files \
  --obsolete_pdbs_path=/data/pdb_mmcif/obsolete.dat \
- --output_dir=$BASE_DIR/outputs  \
+ --output_dir=$BASE_DIR/outputs \
  --model_preset=monomer \
  --db_preset=full_dbs \
  --max_template_date=2021-12-31 
 ```
 
-In particular, you may run it with a command
+In particular, you may submit it with a command
 
-```
+```bash
 sbatch run_alphafold.slurm inputs/file_with_monomer.fasta
 ```
 
 to have the results written into the `outputs` directory.
 
+#### External codebase
+
+For the sake of the ease of development, there is an option to run Alphafold2 from the external codebase from `alphafold_current` subdirectory.
+
+In this setting, the singularity container provides the environment (CUDA drivers, installed packages etc.) but the code is kept externally to the docker. As an effect, you don't have to rebuild the docker every time you make *minor* code changes. If some new packages were involved in the changed code, you might have to rebuild the singularity container, too, to match the code with the installed environment.
+
+To run it in this setting execute the following steps:
+
+1. Execute `mkdir alphafold_current` to create the codebase subdirectory
+    
+1. Clone this repository into `alphafold_current` subdirectory:
+
+    ```bash
+    cd alphafold_current
+    git clone https://github.com/SzymonNowakowski/alphafold.git
+    ```
+
+1. Download chemical properties file (i.e. execute manually lines 62-63 from the Dockerfile) into the `alphafold/alphafold/common` subdirectory of `alphafold_current` (which has been set as the current directory in the previous step):
+    ```
+    wget -q -P ./alphafold/alphafold/common/ https://git.scicore.unibas.ch/schwede/openstructure/-/raw/7102c63615b64735c4941278d92b554ec94415f8/modules/mol/alg/src/stereo_chemical_props.txt
+    ```
+
+1. Submit the following 
+slurm job `run_alphafold_external_code.slurm`:
+
+```bash
+#!/bin/bash
+#SBATCH --job-name alphafold2.1.1_external_code
+#SBATCH -A xxxx             # your account or grant name (to be charged for the computations in HPC)
+#SBATCH --time=2-00:00:00   # or whatever fits the QoS, adjust this to match the walltime of your job
+#SBATCH --cpus-per-task=8   # DO NOT INCREASE THIS AS ALPHAFOLD CANNOT TAKE ADVANTAGE OF MORE
+#SBATCH --gres=gpu:1        # You need to request one GPU to be able to run AlphaFold properly
+#SBATCH --mem=90G           # adjust this according to the memory requirement per node you need
+
+###LOGGING
+echo $1 >> outputs/$SLURM_JOB_ID.desc
+cat $0 >> outputs/$SLURM_JOB_ID.desc
+
+#set the environment PATH
+export PYTHONNOUSERSITE=True
+#module load singularity
+ALPHAFOLD_DATA_PATH=remote_dir_with_protein_databases
+ALPHAFOLD_MODELS=remote_dir_with_model_parameters
+BASE_DIR=$(pwd)
+CODE_DIR=$BASE_DIR/alphafold_current/alphafold
+
+
+#Run the command
+singularity  exec --nv \
+ -B $CODE_DIR:/alphafold_current \
+ -B $ALPHAFOLD_DATA_PATH:/data \
+ -B $ALPHAFOLD_MODELS \
+ --pwd  /app/alphafold remote_dir/alphafold-2.1.1.sif \
+  python $CODE_DIR/run_alphafold_external_code.py \
+ --fasta_paths=$BASE_DIR/$1 \
+ --uniref90_database_path=/data/uniref90/uniref90.fasta \
+ --data_dir=/data \
+ --mgnify_database_path=/data/mgnify/mgy_clusters_2018_12.fa \
+ --bfd_database_path=/data/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt \
+ --uniclust30_database_path=/data/uniclust30/uniclust30_2018_08/uniclust30_2018_08 \
+ --pdb70_database_path=/data/pdb70/pdb70 \
+ --template_mmcif_dir=/data/pdb_mmcif/mmcif_files \
+ --obsolete_pdbs_path=/data/pdb_mmcif/obsolete.dat \
+ --output_dir=$BASE_DIR/outputs \
+ --model_preset=monomer \
+ --db_preset=full_dbs \
+ --max_template_date=2021-12-31 
+```
+
+In particular, you may submit it with a command
+
+```bash
+sbatch run_alphafold_external_code.slurm inputs/file_with_monomer.fasta
+```
+
+to have the results written into the `outputs` directory.
+
+#### Execution divided into CPU- and GPU-intensive parts
+
+*Work in progress*
+
 #### Changes
+New scripts in this version (Center4ML version):
+
+```bash
+run_alphafold_external_code.py     #external codebase
+run_alphafold_extract_features.py  #CPU-intensive part of computations only
+run_alphafold_from_features.py     #GPU-intensive part of computations only     
+```
+
 New flags in v2.1.1:
 
 ```
