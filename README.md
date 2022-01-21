@@ -487,7 +487,85 @@ to have the results written into the `outputs` directory.
 
 #### Execution divided into CPU- and GPU-intensive parts
 
-*Work in progress*
+Features extraction step is often the most time consuming part of the computations. You may separate feature extraction (CPU-intensive) and structure prediction (GPU-intensive) tasks as below:
+
+1. Feature extraction 
+Increase `n_cpu` (default is `8`) to take advantage of more cores available. However, many processes and not parallelized and the overall computation time scales poorly with number of cores.
+
+slurm job `run_alphafold_features.slurm`:
+
+```bash
+#!/bin/bash
+#SBATCH --job-name alphafold2.1.1_features
+#SBATCH -A xxxx             # your account or grant name (to be charged for the computations in HPC)
+#SBATCH --time=2-00:00:00   # or whatever fits the QoS, adjust this to match the walltime of your job
+#SBATCH --cpus-per-task=8   # default 8. Shouldn't be larger than n_cpu parameter
+#SBATCH --gres=gpu:0        # You don't need GPU to feature extraction
+#SBATCH --mem=90G           # adjust this according to the memory requirement per node you need
+
+###LOGGING
+echo $1 >> outputs/$SLURM_JOB_ID.desc
+cat $0 >> outputs/$SLURM_JOB_ID.desc
+
+#set the environment PATH
+export PYTHONNOUSERSITE=True
+#module load singularity
+ALPHAFOLD_DATA_PATH=remote_dir_with_protein_databases
+BASE_DIR=$(pwd)
+
+#Run the command
+singularity  exec \
+ -B $ALPHAFOLD_DATA_PATH:/data \
+ --pwd  /app/alphafold remote_dir/alphafold-2.1.1.sif \
+  python run_alphafold_extract_features.py \
+ --fasta_paths=$BASE_DIR/$1 \
+ --uniref90_database_path=/data/uniref90/uniref90.fasta \
+ --mgnify_database_path=/data/mgnify/mgy_clusters_2018_12.fa \
+ --bfd_database_path=/data/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt \
+ --uniclust30_database_path=/data/uniclust30/uniclust30_2018_08/uniclust30_2018_08 \
+ --pdb70_database_path=/data/pdb70/pdb70 \
+ --template_mmcif_dir=/data/pdb_mmcif/mmcif_files \
+ --obsolete_pdbs_path=/data/pdb_mmcif/obsolete.dat \
+ --output_dir=$BASE_DIR/outputs \
+ --model_preset=monomer \
+ --db_preset=full_dbs \
+ --max_template_date=2021-12-31 \
+ --max_template_hits=20 \
+ --n_cpu=8
+```
+
+2. Predict structure from precomputed features
+slurm job `run_alphafold_predict.slurm`:
+
+```
+#!/bin/bash
+##SBATCH --job-name alphafold2.1.1_predict
+#SBATCH -A xxxx             # your account or grant name (to be charged for the computations in HPC)
+#SBATCH --time=2-00:00:00   # or whatever fits the QoS, adjust this to match the walltime of your job
+#SBATCH --cpus-per-task=8   # DO NOT INCREASE THIS AS ALPHAFOLD CANNOT TAKE ADVANTAGE OF MORE
+#SBATCH --gres=gpu:1        # You need to request one GPU to be able to run AlphaFold properly
+#SBATCH --mem=90G           # adjust this according to the memory requirement per node you need
+
+###LOGGING
+echo $1 >> outputs/$SLURM_JOB_ID.desc
+cat $0 >> outputs/$SLURM_JOB_ID.desc
+
+#set the environment PATH
+export PYTHONNOUSERSITE=True
+#module load singularity
+ALPHAFOLD_MODELS=remote_dir_with_model_parameters
+BASE_DIR=$(pwd)
+
+#Run the command
+singularity  exec --nv \
+ -B $ALPHAFOLD_MODELS:/data \
+ --pwd  /app/alphafold alphafold-2.1.1.sif \
+  python run_alphafold_from_features.py \
+ --features_paths=$BASE_DIR/$1 \
+ --data_dir=/data \
+ --output_dir=$BASE_DIR/outputs \
+ --model_preset=monomer
+```
 
 #### Changes
 New scripts in this version (Center4ML version):
