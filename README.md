@@ -586,7 +586,7 @@ Features extraction step is often the most time consuming part of the computatio
     singularity  exec --nv \
      -B $CODE_DIR:/alphafold_current \
      -B $ALPHAFOLD_MODELS:/data \
-     --pwd  /app/alphafold alphafold-2.1.1.sif \
+     --pwd  /app/alphafold remote_dir/alphafold-2.1.1.sif \
       python run_alphafold_from_features.py \
      --features_paths=$BASE_DIR/$1 \
      --data_dir=/data \
