@@ -608,7 +608,7 @@ New scripts in this version (Center4ML version):
 ```bash
 run_alphafold_external_code.py     #external codebase
 run_alphafold_extract_features.py  #CPU-intensive part of computations only
-run_alphafold_from_features.py     #GPU-intensive part of computations only     
+run_alphafold_from_features.py     #GPU-intensive part of computations only, both container codebase and external codebase     
 ```
 
 New flags in v2.1.1:
