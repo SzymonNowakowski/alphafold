@@ -430,60 +430,59 @@ To run it in this setting execute the following steps:
     wget -q -P ./alphafold/alphafold/common/ https://git.scicore.unibas.ch/schwede/openstructure/-/raw/7102c63615b64735c4941278d92b554ec94415f8/modules/mol/alg/src/stereo_chemical_props.txt
     ```
 
-1. Submit the following 
-slurm job `run_alphafold_external_code.slurm`:
+1. Submit the following slurm job `run_alphafold_external_code.slurm`:
 
-```bash
-#!/bin/bash
-#SBATCH --job-name alphafold2.1.1_external_code
-#SBATCH -A xxxx             # your account or grant name (to be charged for the computations in HPC)
-#SBATCH --time=2-00:00:00   # or whatever fits the QoS, adjust this to match the walltime of your job
-#SBATCH --cpus-per-task=8   # DO NOT INCREASE THIS AS ALPHAFOLD CANNOT TAKE ADVANTAGE OF MORE
-#SBATCH --gres=gpu:1        # You need to request one GPU to be able to run AlphaFold properly
-#SBATCH --mem=90G           # adjust this according to the memory requirement per node you need
-
-###LOGGING
-echo $1 >> outputs/$SLURM_JOB_ID.desc
-cat $0 >> outputs/$SLURM_JOB_ID.desc
-
-#set the environment PATH
-export PYTHONNOUSERSITE=True
-#module load singularity
-ALPHAFOLD_DATA_PATH=remote_dir_with_protein_databases
-ALPHAFOLD_MODELS=remote_dir_with_model_parameters
-BASE_DIR=$(pwd)
-CODE_DIR=$BASE_DIR/alphafold_current/alphafold
-
-
-#Run the command
-singularity  exec --nv \
- -B $CODE_DIR:/alphafold_current \
- -B $ALPHAFOLD_DATA_PATH:/data \
- -B $ALPHAFOLD_MODELS \
- --pwd  /app/alphafold remote_dir/alphafold-2.1.1.sif \
-  python $CODE_DIR/run_alphafold_external_code.py \
- --fasta_paths=$BASE_DIR/$1 \
- --uniref90_database_path=/data/uniref90/uniref90.fasta \
- --data_dir=/data \
- --mgnify_database_path=/data/mgnify/mgy_clusters_2018_12.fa \
- --bfd_database_path=/data/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt \
- --uniclust30_database_path=/data/uniclust30/uniclust30_2018_08/uniclust30_2018_08 \
- --pdb70_database_path=/data/pdb70/pdb70 \
- --template_mmcif_dir=/data/pdb_mmcif/mmcif_files \
- --obsolete_pdbs_path=/data/pdb_mmcif/obsolete.dat \
- --output_dir=$BASE_DIR/outputs \
- --model_preset=monomer \
- --db_preset=full_dbs \
- --max_template_date=2021-12-31 
-```
-
-In particular, you may submit it with a command
-
-```bash
-sbatch run_alphafold_external_code.slurm inputs/file_with_monomer.fasta
-```
-
-The results are written into the `outputs` directory.
+    ```bash
+    #!/bin/bash
+    #SBATCH --job-name alphafold2.1.1_external_code
+    #SBATCH -A xxxx             # your account or grant name (to be charged for the computations in HPC)
+    #SBATCH --time=2-00:00:00   # or whatever fits the QoS, adjust this to match the walltime of your job
+    #SBATCH --cpus-per-task=8   # DO NOT INCREASE THIS AS ALPHAFOLD CANNOT TAKE ADVANTAGE OF MORE
+    #SBATCH --gres=gpu:1        # You need to request one GPU to be able to run AlphaFold properly
+    #SBATCH --mem=90G           # adjust this according to the memory requirement per node you need
+    
+    ###LOGGING
+    echo $1 >> outputs/$SLURM_JOB_ID.desc
+    cat $0 >> outputs/$SLURM_JOB_ID.desc
+    
+    #set the environment PATH
+    export PYTHONNOUSERSITE=True
+    #module load singularity
+    ALPHAFOLD_DATA_PATH=remote_dir_with_protein_databases
+    ALPHAFOLD_MODELS=remote_dir_with_model_parameters
+    BASE_DIR=$(pwd)
+    CODE_DIR=$BASE_DIR/alphafold_current/alphafold
+    
+    
+    #Run the command
+    singularity  exec --nv \
+     -B $CODE_DIR:/alphafold_current \
+     -B $ALPHAFOLD_DATA_PATH:/data \
+     -B $ALPHAFOLD_MODELS \
+     --pwd  /app/alphafold remote_dir/alphafold-2.1.1.sif \
+      python $CODE_DIR/run_alphafold_external_code.py \
+     --fasta_paths=$BASE_DIR/$1 \
+     --uniref90_database_path=/data/uniref90/uniref90.fasta \
+     --data_dir=/data \
+     --mgnify_database_path=/data/mgnify/mgy_clusters_2018_12.fa \
+     --bfd_database_path=/data/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt \
+     --uniclust30_database_path=/data/uniclust30/uniclust30_2018_08/uniclust30_2018_08 \
+     --pdb70_database_path=/data/pdb70/pdb70 \
+     --template_mmcif_dir=/data/pdb_mmcif/mmcif_files \
+     --obsolete_pdbs_path=/data/pdb_mmcif/obsolete.dat \
+     --output_dir=$BASE_DIR/outputs \
+     --model_preset=monomer \
+     --db_preset=full_dbs \
+     --max_template_date=2021-12-31 
+    ```
+    
+    In particular, you may submit it with a command
+    
+    ```bash
+    sbatch run_alphafold_external_code.slurm inputs/file_with_monomer.fasta
+    ```
+    
+    The results are written into the `outputs` directory.
 
 #### Execution divided into CPU- and GPU-intensive parts
 
@@ -543,14 +542,21 @@ Features extraction step is often the most time consuming part of the computatio
    
     The features are written into the `outputs` subdirectory.
 
-1. **Predict structure from precomputed features** step
+2. **Predict structure from precomputed features** step
 
     ***Important*** The `run_alphafold_from_features.py` script
     supports both the regular (running docker built-in codebase) and the external codebase way of running Alphafold2.
-    If you wish to run the external codebase, execute steps 1-3 from Section [External Codebase](#external-codebase). 
-    If you wish to run the container codebase, you just need to submit the slurm job job `run_alphafold_predict.slurm` as explained below.  
+    
+    1. If you wish to run the external codebase, execute steps 1-3 
+    from Section [External Codebase](#external-codebase) 
+    *before* submitting the slurm job `run_alphafold_predict.slurm`. 
+    
+    2. If you wish to run the container codebase, execute `mkdir alphafold_current` 
+    bash command to create 
+    a dummy empty codebase subdirectory (just to ensure the container binding doesn't fail)
+    and then you just need to submit the slurm job `run_alphafold_predict.slurm` as explained below.  
 
-    1. Submit the following slurm job `run_alphafold_predict.slurm`:
+    3. Submit the following slurm job `run_alphafold_predict.slurm`:
 
     ```
     #!/bin/bash
@@ -570,9 +576,11 @@ Features extraction step is often the most time consuming part of the computatio
     #module load singularity
     ALPHAFOLD_MODELS=remote_dir_with_model_parameters
     BASE_DIR=$(pwd)
+    CODE_DIR=$BASE_DIR/alphafold_current/alphafold
     
     #Run the command
     singularity  exec --nv \
+     -B $CODE_DIR:/alphafold_current \
      -B $ALPHAFOLD_MODELS:/data \
      --pwd  /app/alphafold alphafold-2.1.1.sif \
       python run_alphafold_from_features.py \
