@@ -490,9 +490,13 @@ Features extraction step is often the most time consuming part of the computatio
 
 1. **Feature extraction** step
 
-    1. Increase `n_cpu` (default is `8`) to take advantage of more cores available. However, many processes and not parallelized and the overall computation time scales poorly with number of cores.
+    1. Increase `n_cpu` (default is `8`) to take advantage 
+    of more cores available. However, many processes in 
+    the preliminary Alphafold2 pipeline are not parallelized 
+    and the overall computation time scales 
+    poorly with number of cores.
 
-    1. Submit the following slurm job `run_alphafold_features.slurm`:
+    2. Submit the following slurm job `run_alphafold_features.slurm`:
 
     ```bash
     #!/bin/bash
