@@ -357,7 +357,7 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
 Once you have completed points 1-3 from Section [Running AlphaFold](#running-alphafold)
 and downloaded the databases and the model parameters, you may 
 run AlphaFold under Singularity by submitting the following 
-slurm job `run_alphafold.slurm`:
+slurm job `run_alphafold.slurm` with the `FASTA` type input file located in `inputs` directory passed as a parameter:
 
 ```bash
 #!/bin/bash
@@ -406,7 +406,7 @@ In particular, you may submit it with a command
 sbatch run_alphafold.slurm inputs/file_with_monomer.fasta
 ```
 
-The results are written into the `outputs/file_with_monomer` directory.
+The results would be then written into the `outputs/file_with_monomer` directory.
 
 #### External codebase
 
@@ -430,7 +430,7 @@ To run it in this setting execute the following steps:
     wget -q -P ./alphafold/alphafold/common/ https://git.scicore.unibas.ch/schwede/openstructure/-/raw/7102c63615b64735c4941278d92b554ec94415f8/modules/mol/alg/src/stereo_chemical_props.txt
     ```
 
-1. Submit the following slurm job `run_alphafold_external_code.slurm`:
+1. Submit the following slurm job `run_alphafold_external_code.slurm` with the `FASTA` type input file located in `inputs` directory passed as a parameter:
 
     ```bash
     #!/bin/bash
@@ -482,7 +482,7 @@ To run it in this setting execute the following steps:
     sbatch run_alphafold_external_code.slurm inputs/file_with_monomer.fasta
     ```
     
-    The results are written into the `outputs/file_with_monomer` directory.
+    The results would be then written into the `outputs/file_with_monomer` directory.
 
 #### Execution divided into CPU- and GPU-intensive parts
 
@@ -496,7 +496,7 @@ Features extraction step is often the most time consuming part of the computatio
     and the overall computation time scales 
     poorly with number of cores.
 
-    2. Submit the following slurm job `run_alphafold_features.slurm`:
+    2. Submit the following slurm job `run_alphafold_features.slurm` with the `FASTA` type input file located in `inputs` directory passed as a parameter:
 
     ```bash
     #!/bin/bash
@@ -544,7 +544,8 @@ Features extraction step is often the most time consuming part of the computatio
     sbatch run_alphafold_features.slurm inputs/file_with_monomer.fasta
     ```
    
-    The feature file `features.pkl` are written into the `outputs/file_with_monomer` subdirectory.
+    The feature file `features.pkl` would be then written into  `outputs/file_with_monomer` subdirectory.
+
 
 2. **Predict structure from precomputed features** step
 
@@ -564,7 +565,8 @@ Features extraction step is often the most time consuming part of the computatio
     a dummy empty codebase subdirectory structure (just to ensure the container binding doesn't fail)
     and then you just need to submit the slurm job `run_alphafold_predict.slurm` as explained below.  
 
-    3. Submit the following slurm job `run_alphafold_predict.slurm` with a path to `features.pkl` file created in a previous *feature extraction* step as a parameter:
+    3. Submit the following slurm job `run_alphafold_predict.slurm` 
+    with a path to `features.pkl` file (created in a previous *feature extraction* step in the subdirectory of the `outputs` directory) as an input  parameter:
 
     ```bash
     #!/bin/bash
@@ -604,7 +606,7 @@ Features extraction step is often the most time consuming part of the computatio
     sbatch run_alphafold_from_features.slurm outputs/file_with_monomer/features.pkl
     ```
    
-    The results of inference are then written into the `outputs/file_with_monomer` subdirectory.
+    The results of inference would be then written into the `outputs/file_with_monomer` subdirectory.
 
 #### Changes
 New scripts in this version (Center4ML version):
