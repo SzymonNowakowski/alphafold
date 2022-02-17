@@ -406,7 +406,7 @@ In particular, you may submit it with a command
 sbatch run_alphafold.slurm inputs/file_with_monomer.fasta
 ```
 
-The results are written into the `outputs` directory.
+The results are written into the `outputs/file_with_monomer` directory.
 
 #### External codebase
 
@@ -482,7 +482,7 @@ To run it in this setting execute the following steps:
     sbatch run_alphafold_external_code.slurm inputs/file_with_monomer.fasta
     ```
     
-    The results are written into the `outputs` directory.
+    The results are written into the `outputs/file_with_monomer` directory.
 
 #### Execution divided into CPU- and GPU-intensive parts
 
@@ -544,7 +544,7 @@ Features extraction step is often the most time consuming part of the computatio
     sbatch run_alphafold_features.slurm inputs/file_with_monomer.fasta
     ```
    
-    The features are written into the `outputs` subdirectory.
+    The feature file `features.pkl` are written into the `outputs/file_with_monomer` subdirectory.
 
 2. **Predict structure from precomputed features** step
 
@@ -552,17 +552,21 @@ Features extraction step is often the most time consuming part of the computatio
     supports both the regular (running docker built-in codebase) and the external codebase way of running Alphafold2.
     
     1. If you wish to run the external codebase, execute steps 1-3 
-    from Section [External Codebase](#external-codebase) 
+    from Section [External codebase](#external-codebase) 
     *before* submitting the slurm job `run_alphafold_predict.slurm`. 
     
-    2. If you wish to run the container codebase, execute `mkdir alphafold_current` 
-    bash command to create 
-    a dummy empty codebase subdirectory (just to ensure the container binding doesn't fail)
+    2. If you wish to run the container codebase, execute the following two bash commands:
+    ```bash
+    mkdir alphafold_current
+    mkdir alphafold_current/alphafold
+    ``` 
+    to create 
+    a dummy empty codebase subdirectory structure (just to ensure the container binding doesn't fail)
     and then you just need to submit the slurm job `run_alphafold_predict.slurm` as explained below.  
 
-    3. Submit the following slurm job `run_alphafold_predict.slurm`:
+    3. Submit the following slurm job `run_alphafold_predict.slurm` with a path to `features.pkl` file created in a previous *feature extraction* step as a parameter:
 
-    ```
+    ```bash
     #!/bin/bash
     ##SBATCH --job-name alphafold2.1.1_predict
     #SBATCH -A xxxx             # your account or grant name (to be charged for the computations in HPC)
@@ -597,10 +601,10 @@ Features extraction step is often the most time consuming part of the computatio
     In particular, you may submit it with a command
 
     ```bash
-    sbatch run_alphafold_from_features.slurm inputs/file_with_monomer.fasta
+    sbatch run_alphafold_from_features.slurm outputs/file_with_monomer/features.pkl
     ```
    
-    The results of inference are then written into the `outputs` subdirectory.
+    The results of inference are then written into the `outputs/file_with_monomer` subdirectory.
 
 #### Changes
 New scripts in this version (Center4ML version):
