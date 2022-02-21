@@ -328,7 +328,6 @@ class AlphaFold(hk.Module):
                 compute_loss=compute_loss):
       logging.info("Alphafold::__call__::do_call invoked for %s recycle iteration called from %s", str(recycle_idx), called_from)
       if self.config.resample_msa_in_recycling:
-        logging.info("Alphafold::__call__::do_call if")
         num_ensemble = batch_size // (self.config.num_recycle + 1)
         def slice_recycle_idx(x):
           start = recycle_idx * num_ensemble
@@ -336,7 +335,6 @@ class AlphaFold(hk.Module):
           return jax.lax.dynamic_slice_in_dim(x, start, size, axis=0)
         ensembled_batch = jax.tree_map(slice_recycle_idx, batch)
       else:
-        logging.info("Alphafold::__call__::do_call else")
         num_ensemble = batch_size
         ensembled_batch = batch
 
@@ -389,7 +387,7 @@ class AlphaFold(hk.Module):
         logging.info("Initialization of body variable")
         _, prev = body((0, prev))
       else:
-        logging.info("Wrapping variable body into haiku-native while loop")
+        logging.info("Wrapping variable body into haiku-native while loop for %d iterations", num_iter)
         _, prev = hk.while_loop(              #https://dm-haiku.readthedocs.io/en/latest/api.html#while-loop
                                               #https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.while_loop.html
             lambda x: x[0] < num_iter,
@@ -406,7 +404,7 @@ class AlphaFold(hk.Module):
       prev = {}
       num_iter = 0
 
-    logging.info("Calling do_call")
+    logging.info("Invoking do_call")
     ret = do_call(prev=prev, recycle_idx=num_iter, called_from="Alphafold::__call__")
     if compute_loss:
       ret = ret[0], [ret[1]]
