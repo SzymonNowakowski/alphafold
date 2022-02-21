@@ -406,6 +406,7 @@ class AlphaFold(hk.Module):
       prev = {}
       num_iter = 0
 
+    logging.info("Calling do_call")
     ret = do_call(prev=prev, recycle_idx=num_iter, called_from="Alphafold::__call__")
     if compute_loss:
       ret = ret[0], [ret[1]]
