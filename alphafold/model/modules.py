@@ -30,6 +30,7 @@ from alphafold.model import utils
 import haiku as hk
 import jax
 import jax.numpy as jnp
+from absl import logging
 
 
 def softmax_cross_entropy(logits, labels):
@@ -309,6 +310,10 @@ class AlphaFold(hk.Module):
     impl = AlphaFoldIteration(self.config, self.global_config)
     batch_size, num_residues = batch['aatype'].shape
 
+    def body_logging(x):
+      logging.info("One body iteration")
+      return x
+
     def get_prev(ret):
       new_prev = {
           'prev_pos':
@@ -319,9 +324,11 @@ class AlphaFold(hk.Module):
       return jax.tree_map(jax.lax.stop_gradient, new_prev)
 
     def do_call(prev,
-                recycle_idx,
+                recycle_idx, called_from="",
                 compute_loss=compute_loss):
+      logging.info("Alphafold::__call__::do_call invoked for %s recycle iteration called from %s", str(recycle_idx), called_from)
       if self.config.resample_msa_in_recycling:
+        logging.info("Alphafold::__call__::do_call if")
         num_ensemble = batch_size // (self.config.num_recycle + 1)
         def slice_recycle_idx(x):
           start = recycle_idx * num_ensemble
@@ -329,6 +336,7 @@ class AlphaFold(hk.Module):
           return jax.lax.dynamic_slice_in_dim(x, start, size, axis=0)
         ensembled_batch = jax.tree_map(slice_recycle_idx, batch)
       else:
+        logging.info("Alphafold::__call__::do_call else")
         num_ensemble = batch_size
         ensembled_batch = batch
 
@@ -365,23 +373,40 @@ class AlphaFold(hk.Module):
         # Eval mode or tests: use the maximum number of iterations.
         num_iter = self.config.num_recycle
 
+      logging.info("%d recycle iterations requested", num_iter)
+
       body = lambda x: (x[0] + 1,  # pylint: disable=g-long-lambda
-                        get_prev(do_call(x[1], recycle_idx=x[0],
-                                         compute_loss=False)))
+                        body_logging(get_prev(do_call(x[1], recycle_idx=x[0], called_from="body iteration",
+                                         compute_loss=False))))
+      #body <- function(it, previous_data) {
+      #        result <-  get_prev(do_call(previous_data, recycle_idx=it)
+      #        return it+1, result
+      #       }
+
       if hk.running_init():
         # When initializing the Haiku module, run one iteration of the
         # while_loop to initialize the Haiku modules used in `body`.
+        logging.info("Initialization of body variable")
         _, prev = body((0, prev))
       else:
-        _, prev = hk.while_loop(
+        logging.info("Wrapping variable body into haiku-native while loop")
+        _, prev = hk.while_loop(              #https://dm-haiku.readthedocs.io/en/latest/api.html#while-loop
+                                              #https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.while_loop.html
             lambda x: x[0] < num_iter,
             body,
             (0, prev))
+          # it <- 0
+          # result <- prev
+          # while (it < num_iter) {
+          #    it, result <- body(it, result)
+          #  }
+          #  return it, result
     else:
+      logging.info("No recycle iterations requested")
       prev = {}
       num_iter = 0
 
-    ret = do_call(prev=prev, recycle_idx=num_iter)
+    ret = do_call(prev=prev, recycle_idx=num_iter, called_from="Alphafold::__call__")
     if compute_loss:
       ret = ret[0], [ret[1]]
 
