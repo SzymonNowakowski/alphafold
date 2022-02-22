@@ -423,7 +423,8 @@ class AlphaFold(hk.Module):
 
     logging.info("Invoking do_call")
     ret = do_call(prev=prev, recycle_idx=num_iter, called_from="Alphafold::__call__")
-    logging.info("Counted %s iterations", str(ret['iteration_counter']))
+    its = ret['iteration_counter']
+    logging.info("Counted %s=%s iterations", str(ret['iteration_counter']), str(its))
 
     if compute_loss:
       ret = ret[0], [ret[1]]
