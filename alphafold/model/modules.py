@@ -387,7 +387,7 @@ class AlphaFold(hk.Module):
       def body(x):
         """Add one element to the representations ensemble."""
         i, previous_data = x
-        result = body_logging(get_prev(do_call(i, recycle_idx=previous_data, called_from="body iteration",
+        result = body_logging(get_prev(do_call(previous_data, recycle_idx=i, called_from="body iteration",
                                          compute_loss=False)))
 
         return i+1, result
