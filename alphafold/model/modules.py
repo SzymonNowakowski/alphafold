@@ -189,7 +189,7 @@ class AlphaFoldIteration(hk.Module):
         logging.info("Ensembling: Initialization of body variable")
         _, representations = body((1, representations))
       else:
-        logging.info("Ensembling: Wrapping variable body into haiku-native while loop for %d iterations", num_ensemble)
+        logging.info("Ensembling: Wrapping variable body into haiku-native while loop for %s iterations", str(num_ensemble))
         _, representations = hk.while_loop(
             lambda x: x[0] < num_ensemble,
             body,
