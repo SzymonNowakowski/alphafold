@@ -390,7 +390,7 @@ class AlphaFold(hk.Module):
         result = body_logging(get_prev(do_call(i, recycle_idx=previous_data, called_from="body iteration",
                                          compute_loss=False)))
 
-        return (i+1, result)
+        return i+1, result
 
       if hk.running_init():
         # When initializing the Haiku module, run one iteration of the
