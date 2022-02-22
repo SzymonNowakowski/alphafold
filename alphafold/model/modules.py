@@ -172,6 +172,7 @@ class AlphaFoldIteration(hk.Module):
     if ensemble_representations:
       def body(x):
         """Add one element to the representations ensemble."""
+        logging.info("One body ensemble iteration")
         i, current_representations = x
         feats = slice_batch(i)
         representations_update = evoformer_module(
@@ -314,10 +315,6 @@ class AlphaFold(hk.Module):
     impl = AlphaFoldIteration(self.config, self.global_config)
     batch_size, num_residues = batch['aatype'].shape
 
-    def body_logging(x):
-      logging.info("One body iteration")
-      return x
-
     def get_prev(ret):
       new_prev = {
           'prev_pos':
@@ -378,17 +375,13 @@ class AlphaFold(hk.Module):
       logging.info("%d recycle iterations requested", num_iter)
 
       body = lambda x: (x[0] + 1,  # pylint: disable=g-long-lambda
-                        body_logging(get_prev(do_call(x[1], recycle_idx=x[0], called_from="body iteration",
-                                         compute_loss=False))))
-      #body <- function(it, previous_data) {
-      #        result <-  get_prev(do_call(previous_data, recycle_idx=it)
-      #        return it+1, result
-      #       }
-      def body(x):
-        """Add one element to the representations ensemble."""
-        i, previous_data = x
-        result = body_logging(get_prev(do_call(previous_data, recycle_idx=i, called_from="body iteration",
+                        get_prev(do_call(x[1], recycle_idx=x[0], called_from="body iteration",
                                          compute_loss=False)))
+      def body(x):
+        logging.info("One body recycle iteration")
+        i, previous_data = x
+        result = get_prev(do_call(previous_data, recycle_idx=i, called_from="body iteration",
+                                         compute_loss=False))
 
         return i+1, result
 
