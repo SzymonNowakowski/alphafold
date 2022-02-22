@@ -183,7 +183,7 @@ class AlphaFoldIteration(hk.Module):
               current_representations[k] + representations_update[k])
         return i+1, new_representations
 
-        if hk.running_init():
+      if hk.running_init():
         # When initializing the Haiku module, run one iteration of the
         # while_loop to initialize the Haiku modules used in `body`.
         logging.info("Ensembling: Initialization of body variable")
