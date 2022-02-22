@@ -146,7 +146,7 @@ class AlphaFoldIteration(hk.Module):
                ensemble_representations=False,
                return_representations=False):
 
-    logging.info("AlphaFoldIteration class invoked for a single iteration")
+    #logging.info("AlphaFoldIteration class invoked for a single iteration")
     num_ensemble = jnp.asarray(ensembled_batch['seq_length'].shape[0])
 
     if not ensemble_representations:
@@ -172,7 +172,11 @@ class AlphaFoldIteration(hk.Module):
     if ensemble_representations:
       def body(x):
         """Add one element to the representations ensemble."""
-        logging.info("One body ensemble iteration")
+        #logging.info("One body ensemble iteration")   #it gets printed only ones because of this https://jax.readthedocs.io/en/latest/faq.html
+            #For jax.jit(), the function is executed once using the Python interpreter,
+            # at which time the printing happens
+            # Then, the function is compiled and cached, and executed multiple times
+
         i, current_representations = x
         feats = slice_batch(i)
         representations_update = evoformer_module(
@@ -190,9 +194,7 @@ class AlphaFoldIteration(hk.Module):
         logging.info("Ensembling: Initialization of body variable")
         _, representations = body((1, representations))
       else:
-        logging.info("Ensembling: Wrapping variable body into haiku-native while loop")
-        for _ in range(num_ensemble):
-            logging.info(".")
+        logging.info("Ensembling: Wrapping variable body into haiku-native while loop for %s iterations", str(num_ensemble))
         _, representations = hk.while_loop(
             lambda x: x[0] < num_ensemble,
             body,
@@ -323,15 +325,14 @@ class AlphaFold(hk.Module):
               ret['structure_module']['final_atom_positions'],
           'prev_msa_first_row': ret['representations']['msa_first_row'],
           'prev_pair': ret['representations']['pair'],
+          'iteration_counter': ret['iteration_counter']+1
       }
       return jax.tree_map(jax.lax.stop_gradient, new_prev)
 
     def do_call(prev,
                 recycle_idx, called_from="",
                 compute_loss=compute_loss):
-      logging.info("Alphafold::__call__::do_call invoked, called from %s", called_from)
-      for _ in range(recycle_idx):
-          logging.info(".")
+      logging.info("Alphafold::__call__::do_call invoked for %s recycle iteration called from %s", str(recycle_idx), called_from)
       if self.config.resample_msa_in_recycling:
         num_ensemble = batch_size // (self.config.num_recycle + 1)
         def slice_recycle_idx(x):
@@ -361,6 +362,7 @@ class AlphaFold(hk.Module):
               [num_residues, emb_config.msa_channel]),
           'prev_pair': jnp.zeros(
               [num_residues, num_residues, emb_config.pair_channel]),
+          'iteration_counter': 0,
       }
 
       if 'num_iter_recycling' in batch:
@@ -382,7 +384,10 @@ class AlphaFold(hk.Module):
                         get_prev(do_call(x[1], recycle_idx=x[0], called_from="body iteration",
                                          compute_loss=False)))
       def body(x):
-        logging.info("One body recycle iteration")
+        logging.info("One body recycle iteration")  #it gets printed only ones because of this https://jax.readthedocs.io/en/latest/faq.html
+            #For jax.jit(), the function is executed once using the Python interpreter,
+            # at which time the printing happens
+            # Then, the function is compiled and cached, and executed multiple times
         i, previous_data = x
         result = get_prev(do_call(previous_data, recycle_idx=i, called_from="body iteration",
                                          compute_loss=False))
@@ -414,6 +419,8 @@ class AlphaFold(hk.Module):
 
     logging.info("Invoking do_call")
     ret = do_call(prev=prev, recycle_idx=num_iter, called_from="Alphafold::__call__")
+    logging.info("Counted %s iterations", str(ret['iteration_counter']))
+
     if compute_loss:
       ret = ret[0], [ret[1]]
 
