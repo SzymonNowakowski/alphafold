@@ -183,11 +183,13 @@ class AlphaFoldIteration(hk.Module):
               current_representations[k] + representations_update[k])
         return i+1, new_representations
 
-      if hk.running_init():
+        if hk.running_init():
         # When initializing the Haiku module, run one iteration of the
         # while_loop to initialize the Haiku modules used in `body`.
+        logging.info("Ensembling: Initialization of body variable")
         _, representations = body((1, representations))
       else:
+        logging.info("Ensembling: Wrapping variable body into haiku-native while loop for %d iterations", num_ensemble)
         _, representations = hk.while_loop(
             lambda x: x[0] < num_ensemble,
             body,
@@ -382,14 +384,21 @@ class AlphaFold(hk.Module):
       #        result <-  get_prev(do_call(previous_data, recycle_idx=it)
       #        return it+1, result
       #       }
+      def body(x):
+        """Add one element to the representations ensemble."""
+        i, previous_data = x
+        result = body_logging(get_prev(do_call(i, recycle_idx=previous_data, called_from="body iteration",
+                                         compute_loss=False)))
+
+        return (i+1, result)
 
       if hk.running_init():
         # When initializing the Haiku module, run one iteration of the
         # while_loop to initialize the Haiku modules used in `body`.
-        logging.info("Initialization of body variable")
+        logging.info("Recycle iterations: Initialization of body variable")
         _, prev = body((0, prev))
       else:
-        logging.info("Wrapping variable body into haiku-native while loop for %d iterations", num_iter)
+        logging.info("Recycle iterations: Wrapping variable body into haiku-native while loop for %d iterations", num_iter)
         _, prev = hk.while_loop(              #https://dm-haiku.readthedocs.io/en/latest/api.html#while-loop
                                               #https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.while_loop.html
             lambda x: x[0] < num_iter,
