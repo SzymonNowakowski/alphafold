@@ -136,6 +136,7 @@ class AlphaFoldIteration(hk.Module):
     super().__init__(name=name)
     self.config = config
     self.global_config = global_config
+    logging.info("AlphaFoldIteration class initiated")
 
   def __call__(self,
                ensembled_batch,
@@ -145,6 +146,7 @@ class AlphaFoldIteration(hk.Module):
                ensemble_representations=False,
                return_representations=False):
 
+    logging.info("AlphaFoldIteration class invoked for a single iteration")
     num_ensemble = jnp.asarray(ensembled_batch['seq_length'].shape[0])
 
     if not ensemble_representations:
