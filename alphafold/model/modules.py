@@ -190,7 +190,9 @@ class AlphaFoldIteration(hk.Module):
         logging.info("Ensembling: Initialization of body variable")
         _, representations = body((1, representations))
       else:
-        logging.info("Ensembling: Wrapping variable body into haiku-native while loop for %s iterations", str(num_ensemble))
+        logging.info("Ensembling: Wrapping variable body into haiku-native while loop")
+        for _ in range(num_ensemble):
+            logging.info(".")
         _, representations = hk.while_loop(
             lambda x: x[0] < num_ensemble,
             body,
@@ -327,7 +329,9 @@ class AlphaFold(hk.Module):
     def do_call(prev,
                 recycle_idx, called_from="",
                 compute_loss=compute_loss):
-      logging.info("Alphafold::__call__::do_call invoked for %s recycle iteration called from %s", str(recycle_idx), called_from)
+      logging.info("Alphafold::__call__::do_call invoked, called from %s", called_from)
+      for _ in range(recycle_idx):
+          logging.info(".")
       if self.config.resample_msa_in_recycling:
         num_ensemble = batch_size // (self.config.num_recycle + 1)
         def slice_recycle_idx(x):
