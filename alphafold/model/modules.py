@@ -144,9 +144,10 @@ class AlphaFoldIteration(hk.Module):
                is_training,
                compute_loss=False,
                ensemble_representations=False,
-               return_representations=False):
+               return_representations=False, prev_iterations = 0):
 
     #logging.info("AlphaFoldIteration class invoked for a single iteration")
+
     num_ensemble = jnp.asarray(ensembled_batch['seq_length'].shape[0])
 
     if not ensemble_representations:
@@ -271,6 +272,7 @@ class AlphaFoldIteration(hk.Module):
       if compute_loss:
         total_loss += loss(module, head_config, ret, name, filter_ret=False)
 
+    ret['iteration_counter'] = prev_iterations + 1
     if compute_loss:
       return ret, total_loss
     else:
@@ -325,7 +327,7 @@ class AlphaFold(hk.Module):
               ret['structure_module']['final_atom_positions'],
           'prev_msa_first_row': ret['representations']['msa_first_row'],
           'prev_pair': ret['representations']['pair'],
-          'iteration_counter': ret['iteration_counter']+1
+          'iteration_counter': ret['iteration_counter']
       }
       return jax.tree_map(jax.lax.stop_gradient, new_prev)
 
@@ -344,6 +346,8 @@ class AlphaFold(hk.Module):
         num_ensemble = batch_size
         ensembled_batch = batch
 
+      prev_iterations = prev.pop('iteration_counter')  #remove it from prev
+
       non_ensembled_batch = jax.tree_map(lambda x: x, prev)
 
       return impl(
@@ -351,7 +355,7 @@ class AlphaFold(hk.Module):
           non_ensembled_batch=non_ensembled_batch,
           is_training=is_training,
           compute_loss=compute_loss,
-          ensemble_representations=ensemble_representations)
+          ensemble_representations=ensemble_representations, prev_iterations=prev_iterations)
 
     if self.config.num_recycle:
       emb_config = self.config.embeddings_and_evoformer
