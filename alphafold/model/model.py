@@ -174,4 +174,5 @@ class RunModel:
         get_confidence_metrics(result, multimer_mode=self.multimer_mode))
     logging.info('Output shape was %s',
                  tree.map_structure(lambda x: x.shape, result))
+    logging.info("Counted %s iterations", str(result['iteration_counter']))
     return result
