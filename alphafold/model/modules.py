@@ -393,10 +393,11 @@ class AlphaFold(hk.Module):
             # at which time the printing happens
             # Then, the function is compiled and cached, and executed multiple times
         i, previous_data = x
-        result = get_prev(do_call(previous_data, recycle_idx=i, called_from="body iteration",
-                                         compute_loss=False))
+        retu = do_call(previous_data, recycle_idx=i, called_from="body iteration",
+                       compute_loss=False))
+        result = get_prev(retu)
 
-        return i+1, result
+        return i+1, result, retu
 
       if hk.running_init():
         # When initializing the Haiku module, run one iteration of the
