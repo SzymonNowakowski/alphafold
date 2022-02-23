@@ -406,7 +406,7 @@ class AlphaFold(hk.Module):
         _, prev = body((0, prev))
       else:
         logging.info("Recycle iterations: Wrapping variable body into haiku-native while loop for %d iterations", num_iter)
-        _, prev = hk.while_loop(              #https://dm-haiku.readthedocs.io/en/latest/api.html#while-loop
+        _, prev, ret = hk.while_loop(              #https://dm-haiku.readthedocs.io/en/latest/api.html#while-loop
                                               #https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.while_loop.html
             lambda x: x[0] < num_iter,
             body,
