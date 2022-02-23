@@ -382,7 +382,7 @@ class AlphaFold(hk.Module):
         # Eval mode or tests: use the maximum number of iterations.
         num_iter = self.config.num_recycle
 
-      logging.info("%d recycle iterations requested", num_iter)
+      logging.info("%d recycle iterations requested", num_iter+1)
 
       body = lambda x: (x[0] + 1,  # pylint: disable=g-long-lambda
                         get_prev(do_call(x[1], recycle_idx=x[0], called_from="body iteration",
@@ -422,7 +422,7 @@ class AlphaFold(hk.Module):
       num_iter = 0
 
     logging.info("Invoking do_call")
-    ret = do_call(prev=prev, recycle_idx=num_iter, called_from="Alphafold::__call__")
+    #ret = do_call(prev=prev, recycle_idx=num_iter, called_from="Alphafold::__call__")
 
     if compute_loss:
       ret = ret[0], [ret[1]]
