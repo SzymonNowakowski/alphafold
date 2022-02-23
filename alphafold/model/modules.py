@@ -393,11 +393,10 @@ class AlphaFold(hk.Module):
             # at which time the printing happens
             # Then, the function is compiled and cached, and executed multiple times
         i, previous_data = x
-        retu = do_call(previous_data, recycle_idx=i, called_from="body iteration",
-                       compute_loss=False)
-        result = get_prev(retu)
+        result = get_prev(do_call(previous_data, recycle_idx=i, called_from="body iteration",
+                                         compute_loss=False))
 
-        return i+1, result, retu
+        return i+1, result
 
       if hk.running_init():
         # When initializing the Haiku module, run one iteration of the
@@ -406,7 +405,7 @@ class AlphaFold(hk.Module):
         _, prev = body((0, prev))
       else:
         logging.info("Recycle iterations: Wrapping variable body into haiku-native while loop for %d iterations", num_iter)
-        _, prev, ret = hk.while_loop(              #https://dm-haiku.readthedocs.io/en/latest/api.html#while-loop
+        _, prev = hk.while_loop(              #https://dm-haiku.readthedocs.io/en/latest/api.html#while-loop
                                               #https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.while_loop.html
             lambda x: x[0] < num_iter,
             body,
@@ -423,7 +422,9 @@ class AlphaFold(hk.Module):
       num_iter = 0
 
     logging.info("Invoking do_call")
-    #ret = do_call(prev=prev, recycle_idx=num_iter, called_from="Alphafold::__call__")
+    ret = do_call(prev=prev, recycle_idx=num_iter, called_from="Alphafold::__call__")
+    prev = get_prev(ret)
+    ret = do_call(prev=prev, recycle_idx=num_iter+1, called_from="Alphafold::__call__")
 
     if compute_loss:
       ret = ret[0], [ret[1]]
