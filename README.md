@@ -594,7 +594,8 @@ Features extraction step is often the most time consuming part of the computatio
        --features_paths=$BASE_DIR/$1 \
        --data_dir=/data \
        --output_dir=$BASE_DIR/outputs \
-       --model_preset=monomer
+       --model_preset=monomer \
+       --structural_hypothesis_file=path_to_auxiliary_PDB_file    #Auxiliary structural hypothesis PDB file to warm-start alphafold iterations
       ```
 
       In particular, you may submit it with a command
@@ -611,16 +612,22 @@ New scripts in this version (Center4ML version):
 ```bash
 run_alphafold_external_code.py     #external codebase
 run_alphafold_extract_features.py  #CPU-intensive part of computations only
-run_alphafold_from_features.py     #GPU-intensive part of computations only, both container codebase and external codebase     
+run_alphafold_from_features.py     #GPU-intensive part of computations only, #
+                                   # both container codebase and external codebase supported
+                                   # also, supports structural_hypothesis_file parameter     
 ```
 
 New flags in v2.1.1:
 
-```
+```bash
  --model_preset=monomer    
  --db_preset=full_dbs
 ``` 
+New flags in v2.1.1 - **Center4ML only**:
 
+```bash
+ --structural_hypothesis_file=path_to_auxiliary_PDB_file    $Auxiliary structural hypothesis PDB file to warm-start alphafold iterations
+``` 
 Also, it became mandatory to set `max_template_date` in v2.1.1
 
 Flags from v2.0.0 no longer in use in v2.1.1:

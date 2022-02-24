@@ -32,6 +32,8 @@ import jax
 import jax.numpy as jnp
 from absl import logging
 
+from alphafold.data import parsers
+
 
 def softmax_cross_entropy(logits, labels):
   """Computes softmax cross entropy given logits and one-hot class labels."""
@@ -365,6 +367,11 @@ class AlphaFold(hk.Module):
               [num_residues, num_residues, emb_config.pair_channel]),
           'iteration_counter': 0,
       }
+      if self.config.structural_hypothesis_file is not None:
+          logging.info("Substituting pdb coordinates from %s for the initial recycle iteration")
+          prev['prev_pos'] = parsers.pdb_parse_and_fill(self.config.structural_hypothesis_file, prev['prev_pos'])
+      else:
+          logging.info("Regular initial recycle iteration: initialized with 0s")
 
       if 'num_iter_recycling' in batch:
         # Training time: num_iter_recycling is in batch.

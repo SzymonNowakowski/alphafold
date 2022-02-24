@@ -20,6 +20,9 @@ import re
 import string
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Set
 
+from Bio.PDB import PDBParser
+from alphafold.common import residue_constants
+
 DeletionMatrix = Sequence[Sequence[int]]
 
 
@@ -89,6 +92,30 @@ def parse_fasta(fasta_string: str) -> Tuple[Sequence[str], Sequence[str]]:
     sequences[index] += line
 
   return sequences, descriptions
+
+def pdb_parse_and_fill(file, fill, name = None):
+
+    p = PDBParser()
+    if name is None:
+        name="str"
+
+    s = p.get_structure(name, file)
+
+    next = -1
+    for chains in s:
+        for chain in chains:
+            for residue in chain:
+                for atom in residue:
+                    if atom.id=='CA':
+                        next = next + 1
+                    for interesting_atom in ['CA', 'CB']:
+                        if atom.id == interesting_atom:
+                            coord = atom.get_vector()
+                            fill[next, residue_constants.atom_order[interesting_atom], 0] = coord[0]
+                            fill[next, residue_constants.atom_order[interesting_atom], 1] = coord[1]
+                            fill[next, residue_constants.atom_order[interesting_atom], 2] = coord[2]
+
+    return fill
 
 
 def parse_stockholm(stockholm_string: str) -> Msa:

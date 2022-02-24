@@ -62,6 +62,8 @@ flags.DEFINE_integer('random_seed', None, 'The random seed for the data '
                      'that even if this is set, Alphafold may still not be '
                      'deterministic, because processes like GPU inference are '
                      'nondeterministic.')
+flags.DEFINE_string('structural_hypothesis_file', None,
+                    'Auxiliary structural hypothesis PDB file to warm-start alphafold iterations')
 
 FLAGS = flags.FLAGS
 
@@ -89,6 +91,7 @@ def predict_structure_from_features(
     amber_relaxer: relax.AmberRelaxation,
     benchmark: bool,
     random_seed: int):
+
   """Predicts structure using AlphaFold for the given sequence."""
   logging.info('Predicting %s', fasta_name)
   output_dir = os.path.join(output_dir_base, fasta_name)
@@ -221,6 +224,7 @@ def main(argv):
       model_config.data.eval.num_ensemble = num_ensemble
     model_params = data.get_model_haiku_params(
         model_name=model_name, data_dir=FLAGS.data_dir)
+    model.config['structural_hypothesis_file'] = FLAGS.structural_hypothesis_file
     model_runner = model.RunModel(model_config, model_params)
     model_runners[model_name] = model_runner
 
