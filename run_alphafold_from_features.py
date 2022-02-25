@@ -224,7 +224,7 @@ def main(argv):
       model_config.data.eval.num_ensemble = num_ensemble
     model_params = data.get_model_haiku_params(
         model_name=model_name, data_dir=FLAGS.data_dir)
-    model.config['structural_hypothesis_file'] = FLAGS.structural_hypothesis_file
+    model_config.model.structural_hypothesis_file = FLAGS.structural_hypothesis_file
     model_runner = model.RunModel(model_config, model_params)
     model_runners[model_name] = model_runner
 

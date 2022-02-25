@@ -368,7 +368,7 @@ class AlphaFold(hk.Module):
           'iteration_counter': 0,
       }
       if self.config.structural_hypothesis_file is not None:
-          logging.info("Substituting pdb coordinates from %s for the initial recycle iteration")
+          logging.info("Substituting pdb coordinates from %s for the initial recycle iteration", self.config.structural_hypothesis_file)
           prev['prev_pos'] = parsers.pdb_parse_and_fill(self.config.structural_hypothesis_file, prev['prev_pos'])
       else:
           logging.info("Regular initial recycle iteration: initialized with 0s")

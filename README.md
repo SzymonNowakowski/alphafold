@@ -354,6 +354,10 @@ with 12 vCPUs, 85 GB of RAM, a 100 GB boot disk, the databases on an additional
 
 #### Container codebase
 
+:ledger: **Note: The `run_alphafold.py` script
+accepts the `--structural_hypothesis_file` flag as optional. In the execution guidelines below it is not provided, 
+but it may be provided as well.**
+
 Once you have completed points 1-3 from Section [Running AlphaFold](#running-alphafold)
 and downloaded the databases and the model parameters, you may 
 run AlphaFold under Singularity by submitting the following 
@@ -409,6 +413,9 @@ sbatch run_alphafold.slurm inputs/file_with_monomer.fasta
 The results would be then written into the `outputs/file_with_monomer` directory.
 
 #### External codebase
+:ledger: **Note: The `run_alphafold_external_code.py` script
+accepts the `--structural_hypothesis_file` flag as optional. In the execution guidelines below it is not provided, 
+but it may be provided as well.**
 
 For the sake of the ease of development, there is an option to run Alphafold2 from the external codebase from `alphafold_current` subdirectory.
 
@@ -547,9 +554,12 @@ Features extraction step is often the most time consuming part of the computatio
 
 2. **Predict structure from precomputed features** step
 
-   :ledger: **Note: The `run_alphafold_from_features.py` script
+   :ledger: **Note 1: The `run_alphafold_from_features.py` script
    supports both the regular (running docker built-in codebase) and the external codebase way of running Alphafold2.**
-    
+   
+   :ledger: **Note 2: The `run_alphafold_from_features.py` script
+   accepts the `--structural_hypothesis_file` flag as optional. In the execution guidelines below it is provided, 
+   but it may be ommited as well.**    
    1. If you wish to run the external codebase, execute steps 1-3 
       from Section [External codebase](#external-codebase) 
       *before* submitting the slurm job `run_alphafold_predict.slurm`. 
@@ -564,7 +574,8 @@ Features extraction step is often the most time consuming part of the computatio
       and then you just need to submit the slurm job `run_alphafold_predict.slurm` as explained below.  
 
    3. Submit the following slurm job `run_alphafold_predict.slurm` 
-      with a path to `features.pkl` file (created in a previous *feature extraction* step in the subdirectory of the `outputs` directory) as an input  parameter:
+      with a path to `features.pkl` file (created in a previous *feature extraction* step in the subdirectory of the `outputs` directory) 
+      and a path to an auxiliary hypothesis PDB file input parameters:
       ```bash
       #!/bin/bash
       #SBATCH --job-name alphafold2.1.1_predict
@@ -575,7 +586,9 @@ Features extraction step is often the most time consuming part of the computatio
       #SBATCH --mem=90G           # adjust this according to the memory requirement per node you need
     
       ###LOGGING
+      
       echo $1 >> outputs/$SLURM_JOB_ID.desc
+      echo $2 >> outputs/$SLURM_JOB_ID.desc
       cat $0 >> outputs/$SLURM_JOB_ID.desc
    
       #set the environment PATH
@@ -595,13 +608,13 @@ Features extraction step is often the most time consuming part of the computatio
        --data_dir=/data \
        --output_dir=$BASE_DIR/outputs \
        --model_preset=monomer \
-       --structural_hypothesis_file=path_to_auxiliary_PDB_file    #Auxiliary structural hypothesis PDB file to warm-start alphafold iterations
+       --structural_hypothesis_file=$BASE_DIR/$2    #Auxiliary structural hypothesis PDB file to warm-start alphafold iterations
       ```
 
       In particular, you may submit it with a command
 
       ```bash
-      sbatch run_alphafold_from_features.slurm outputs/file_with_monomer/features.pkl
+      sbatch run_alphafold_from_features.slurm outputs/file_with_monomer/features.pkl inputs/file_with_monomer_structural_hypothesis.PDB
       ```
    
       The results of inference would be then written into the `outputs/file_with_monomer` subdirectory.
@@ -623,7 +636,7 @@ New flags in v2.1.1:
  --model_preset=monomer    
  --db_preset=full_dbs
 ``` 
-New flags in v2.1.1 - **Center4ML only**:
+New optional flag in v2.1.1 - **Center4ML version only**:
 
 ```bash
  --structural_hypothesis_file=path_to_auxiliary_PDB_file    $Auxiliary structural hypothesis PDB file to warm-start alphafold iterations

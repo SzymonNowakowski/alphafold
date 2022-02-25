@@ -111,9 +111,14 @@ def pdb_parse_and_fill(file, fill, name = None):
                     for interesting_atom in ['CA', 'CB']:
                         if atom.id == interesting_atom:
                             coord = atom.get_vector()
-                            fill[next, residue_constants.atom_order[interesting_atom], 0] = coord[0]
-                            fill[next, residue_constants.atom_order[interesting_atom], 1] = coord[1]
-                            fill[next, residue_constants.atom_order[interesting_atom], 2] = coord[2]
+                            ######I addressed the error I received with a simple assignment and followed the solution:
+                            # TypeError: '<class 'jax.interpreters.partial_eval.DynamicJaxprTracer'>' object
+                            # does not support item assignment. JAX arrays are immutable.
+                            # Instead of ``x[idx] = y``, use ``x = x.at[idx].set(y)``
+                            # or another .at[] method: https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.ndarray.at.html
+                            fill = fill.at[next, residue_constants.atom_order[interesting_atom], 0].set(coord[0])
+                            fill = fill.at[next, residue_constants.atom_order[interesting_atom], 1].set(coord[1])
+                            fill = fill.at[next, residue_constants.atom_order[interesting_atom], 2].set(coord[2])
 
     return fill
 

@@ -116,6 +116,9 @@ flags.DEFINE_integer('random_seed', None, 'The random seed for the data '
 flags.DEFINE_boolean('use_precomputed_msas', False, 'Whether to read MSAs that '
                      'have been written to disk. WARNING: This will not check '
                      'if the sequence, database or configuration have changed.')
+flags.DEFINE_string('structural_hypothesis_file', None,
+                    'Auxiliary structural hypothesis PDB file to warm-start alphafold iterations')
+
 
 FLAGS = flags.FLAGS
 
@@ -378,6 +381,7 @@ def main(argv):
       model_config.data.eval.num_ensemble = num_ensemble
     model_params = data.get_model_haiku_params(
         model_name=model_name, data_dir=FLAGS.data_dir)
+    model_config.model.structural_hypothesis_file = FLAGS.structural_hypothesis_file
     model_runner = model.RunModel(model_config, model_params)
     model_runners[model_name] = model_runner
 
