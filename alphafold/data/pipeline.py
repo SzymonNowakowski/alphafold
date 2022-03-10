@@ -177,19 +177,26 @@ class DataPipeline:
     msa_for_templates = parsers.remove_empty_columns_from_stockholm_msa(
         msa_for_templates)
 
-    if self.template_searcher.input_format == 'sto':
-      pdb_templates_result = self.template_searcher.query(msa_for_templates)
-    elif self.template_searcher.input_format == 'a3m':
-      uniref90_msa_as_a3m = parsers.convert_stockholm_to_a3m(msa_for_templates)
-      pdb_templates_result = self.template_searcher.query(uniref90_msa_as_a3m)
-    else:
-      raise ValueError('Unrecognized template input format: '
-                       f'{self.template_searcher.input_format}')
-
     pdb_hits_out_path = os.path.join(
         msa_output_dir, f'pdb_hits.{self.template_searcher.output_format}')
-    with open(pdb_hits_out_path, 'w') as f:
-      f.write(pdb_templates_result)
+    
+    if not self.use_precomputed_msas:
+      if self.template_searcher.input_format == 'sto':
+        pdb_templates_result = self.template_searcher.query(msa_for_templates)
+      elif self.template_searcher.input_format == 'a3m':
+        uniref90_msa_as_a3m = parsers.convert_stockholm_to_a3m(msa_for_templates)
+        pdb_templates_result = self.template_searcher.query(uniref90_msa_as_a3m)
+      else:
+        raise ValueError('Unrecognized template input format: '
+                         f'{self.template_searcher.input_format}')
+
+      with open(pdb_hits_out_path, 'w') as f:
+        f.write(pdb_templates_result)
+
+    else:
+        logging.warning('Reading MSA from file %s', pdb_hits_out_path)
+        with open(pdb_hits_out_path) as f:
+          pdb_templates_result = f.read()
 
     uniref90_msa = parsers.parse_stockholm(jackhmmer_uniref90_result['sto'])
     uniref90_msa = uniref90_msa.truncate(max_seqs=self.uniref_max_hits)
