@@ -210,6 +210,7 @@ CONFIG = ml_collections.ConfigDict({
         },
     },
     'model': {
+        'structural_hypothesis_file': "/home/szymon/alpha-center/inputs/conformation1noh.pdb",
         'embeddings_and_evoformer': {
             'evoformer_num_block': 48,
             'evoformer': {

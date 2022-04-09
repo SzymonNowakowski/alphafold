@@ -86,8 +86,8 @@ class RunModel:
             compute_loss=False,
             ensemble_representations=True)
 
-    self.apply = jax.jit(hk.transform(_forward_fn).apply)
-    self.init = jax.jit(hk.transform(_forward_fn).init)
+    self.apply = hk.transform(_forward_fn).apply
+    self.init = hk.transform(_forward_fn).init
 
   def init_params(self, feat: features.FeatureDict, random_seed: int = 0):
     """Initializes the model parameters.

@@ -373,6 +373,12 @@ class AlphaFold(hk.Module):
       else:
           logging.info("Regular initial recycle iteration: initialized with 0s")
 
+      for ll in range(412):
+          for jj in range(3):
+            logging.info("%d CA %d: %s", ll, jj, str(prev['prev_pos'].at[ll, residue_constants.atom_order['CA'], jj].get()))
+          for jj in range(3):
+            logging.info("%d CB %d: %s", ll, jj, str(prev['prev_pos'].at[ll, residue_constants.atom_order['CB'], jj].get()))
+
       if 'num_iter_recycling' in batch:
         # Training time: num_iter_recycling is in batch.
         # The value for each ensemble batch is the same, so arbitrarily taking
